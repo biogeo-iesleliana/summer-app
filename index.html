@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APP SUMMER · Prototipo 0.3</title>
+<title>APP SUMMER · Prototipo 0.4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -62,7 +62,7 @@
 </head>
 <body>
 <header>
-  <h1>APP SUMMER <span class="muted">prototipo 0.3</span></h1>
+  <h1>APP SUMMER <span class="muted">prototipo 0.4</span></h1>
   <button data-v="vocab" class="on">1 · Vocabulario</button>
   <button data-v="ajustes">2 · Ajustes</button>
   <button data-v="sesion">3 · Sesión</button>
@@ -73,6 +73,20 @@
   <!-- VOCABULARIO -->
   <section id="vocab" class="view on">
     <p>Escribe una palabra y pulsa <b>Buscar</b>. Toca el pictograma que mejor la represente, o pulsa <b>📷 Foto propia</b> para usar una foto (desde la galería o la cámara de la tablet). La imagen marcada en verde es la que verá la alumna.</p>
+    <div class="word" style="background:#f3f7ff">
+      <div class="row">
+        <label>Unidad: <input id="unitName" placeholder="p. ej. Las plantas" autocomplete="off"></label>
+        <button class="b" id="saveUnit">💾 Guardar unidad en archivo</button>
+        <label class="b" style="cursor:pointer">📂 Abrir archivo<input type="file" accept=".json,application/json" hidden id="openUnit"></label>
+      </div>
+      <div class="row">
+        <select id="repoUnits"><option value="">Unidades del repositorio…</option></select>
+        <button class="b" id="loadRepo">Cargar</button>
+        <button class="b" id="refreshRepo" title="Actualizar la lista">↻</button>
+        <span class="muted" id="unitMsg"></span>
+      </div>
+      <p class="muted">Para compartir una unidad: guárdala en archivo y súbela a la carpeta <b>unidades</b> del repositorio. Así se puede cargar desde cualquier dispositivo. El registro de la alumna <b>no</b> se guarda en la unidad: se queda solo en este dispositivo. No subas fotos de personas: el repositorio es público.</p>
+    </div>
     <div class="row">
       <input id="newWord" placeholder="p. ej. raíz" autocomplete="off">
       <button class="b p" id="addWord">Buscar y añadir</button>
@@ -248,6 +262,65 @@ function renderWords(){
     box.appendChild(d);
   });
 }
+/* ---------- unidades: archivo y repositorio ---------- */
+// repositorio de donde se leen las unidades (se deduce de la dirección de GitHub Pages)
+const REPO = (() => {
+  const m = location.hostname.match(/^([^.]+)\.github\.io$/);
+  const path = location.pathname.split("/").filter(Boolean)[0];
+  return m && path ? `${m[1]}/${path}` : "biogeo-iesleliana/summer-app";
+})();
+const slug = s => (s || "unidad").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "unidad";
+const msg = t => { $("#unitMsg").textContent = t; if (t) setTimeout(() => { if ($("#unitMsg").textContent === t) $("#unitMsg").textContent = ""; }, 6000); };
+
+$("#unitName").value = S.unitName || "";
+$("#unitName").onchange = e => { S.unitName = e.target.value.trim(); save(); };
+
+$("#saveUnit").onclick = () => {
+  const unit = { formato: "app-summer-unidad", version: 1, nombre: S.unitName || "Unidad",
+    palabras: S.words.map(w => ({ texto: w.texto, pictoId: w.pictoId, cands: w.cands, foto: w.foto, useFoto: !!w.useFoto })) };
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(unit, null, 1)], {type: "application/json"}));
+  a.download = slug(unit.nombre) + ".json"; a.click();
+  msg("Archivo guardado en Descargas.");
+};
+
+let pendingUnit = null;   // carga en dos pasos para no borrar sin querer la unidad actual
+function offerUnit(unit){
+  if (!unit || unit.formato !== "app-summer-unidad" || !Array.isArray(unit.palabras)) { msg("Ese archivo no es una unidad de APP SUMMER."); return; }
+  pendingUnit = unit;
+  if (!S.words.length) return applyUnit();
+  $("#loadRepo").textContent = `¿Sustituir las palabras actuales por «${unit.nombre}»? Pulsa otra vez`;
+}
+function applyUnit(){
+  const u = pendingUnit; pendingUnit = null; $("#loadRepo").textContent = "Cargar";
+  S.unitName = u.nombre; S.words = u.palabras.map(p => ({ texto: p.texto, pictoId: p.pictoId ?? null, cands: p.cands || [], foto: p.foto, useFoto: !!p.useFoto }));
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){ msg("Unidad cargada, pero no cabe entera en este dispositivo (demasiadas fotos)."); }
+  $("#unitName").value = u.nombre; renderWords(); msg(`Unidad «${u.nombre}» cargada.`);
+}
+
+$("#openUnit").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try { offerUnit(JSON.parse(await f.text())); if (pendingUnit) $("#loadRepo").focus(); } catch(err){ msg("No se pudo leer el archivo."); }
+};
+
+async function listRepoUnits(){
+  const sel = $("#repoUnits");
+  try {
+    const r = await fetch(`https://api.github.com/repos/${REPO}/contents/unidades`);
+    if (!r.ok) throw 0;
+    const files = (await r.json()).filter(f => f.name.endsWith(".json"));
+    sel.innerHTML = `<option value="">Unidades del repositorio (${files.length})…</option>` +
+      files.map(f => `<option value="${f.download_url}">${f.name.replace(/\.json$/, "")}</option>`).join("");
+  } catch(e){ sel.innerHTML = `<option value="">Sin conexión con el repositorio</option>`; }
+}
+$("#refreshRepo").onclick = listRepoUnits;
+$("#loadRepo").onclick = async () => {
+  if (pendingUnit) return applyUnit();
+  const url = $("#repoUnits").value; if (!url) { msg("Elige primero una unidad de la lista."); return; }
+  try { const r = await fetch(url); offerUnit(await r.json()); } catch(e){ msg("No se pudo descargar la unidad."); }
+};
+listRepoUnits();
+
 function alertIn(el, msg){ const p = document.createElement("p"); p.textContent = msg; p.style.color = "#b00"; el.appendChild(p); setTimeout(() => p.remove(), 5000); }
 $("#addWord").onclick = () => {
   const t = $("#newWord").value.trim(); if (!t) return;

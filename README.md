@@ -7,10 +7,11 @@ Aplicación web libre para aprender **vocabulario básico de una asignatura con 
 - 7 actividades: causa-efecto, presentación, «¿Dónde está…?», escucha y elige, lee y elige, «¿Cómo se llama?» y repaso mezclado; con 2–4 opciones, ayudas de menos a más (repetir → la correcta parpadea → solo queda la correcta) y refuerzo.
 - Barra para la educadora: repetir, marcar «respuesta con mi ayuda», saltar, terminar.
 - Registro de respuestas (sola / con ayuda / error / sin respuesta) exportable a CSV.
-- **Los datos se guardan solo en el dispositivo.**
+- Las **unidades** (palabras, pictogramas y fotos) se comparten a través de la carpeta `unidades/` del repositorio.
+- **Los datos de la alumna se guardan solo en el dispositivo.**
 
 ## Estado
-Prototipo 0.3: un único archivo `index.html`, sin instalación. Necesita internet para buscar pictogramas.
+Prototipo 0.4: un único archivo `index.html`, sin instalación. Necesita internet para buscar pictogramas.
 
 Próxima versión: instalable como app (PWA), funcionamiento sin conexión, más niveles de actividad y versión en valenciano.
 
