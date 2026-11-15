@@ -2,7 +2,7 @@
 
 Aplicación web libre para aprender **vocabulario básico de una asignatura con pictogramas**, pensada para alumnado con movilidad muy reducida (sin motricidad fina) que trabaja con apoyo de una educadora.
 
-- El profesorado escribe las palabras y la app propone pictogramas de **ARASAAC** para elegir.
+- El profesorado escribe las palabras y la app propone pictogramas de **ARASAAC** para elegir, o se usa una foto propia.
 - La alumna responde **tocando la pantalla** (tablet) o con **un pulsador y barrido** (portátil; el pulsador envía Espacio o Intro).
 - 7 actividades: causa-efecto, presentación, «¿Dónde está…?», escucha y elige, lee y elige, «¿Cómo se llama?» y repaso mezclado; con 2–4 opciones, ayudas de menos a más (repetir → la correcta parpadea → solo queda la correcta) y refuerzo.
 - Barra para la educadora: repetir, marcar «respuesta con mi ayuda», saltar, terminar.
@@ -10,7 +10,7 @@ Aplicación web libre para aprender **vocabulario básico de una asignatura con 
 - **Los datos se guardan solo en el dispositivo.**
 
 ## Estado
-Prototipo 0.2: un único archivo `index.html`, sin instalación. Necesita internet para buscar pictogramas.
+Prototipo 0.3: un único archivo `index.html`, sin instalación. Necesita internet para buscar pictogramas.
 
 Próxima versión: instalable como app (PWA), funcionamiento sin conexión, más niveles de actividad y versión en valenciano.
 
