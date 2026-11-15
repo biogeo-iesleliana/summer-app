@@ -1,6 +1,6 @@
 # Unidades de vocabulario
 
-Cada archivo `.json` de esta carpeta es una unidad (palabras, pictogramas elegidos y fotos propias) que se puede cargar en APP SUMMER desde cualquier dispositivo: **Vocabulario → Unidades del repositorio → Cargar**.
+Cada archivo `.json` de esta carpeta es una asignatura (palabras, pictogramas elegidos y fotos propias) que se puede traer a APP SUMMER desde cualquier dispositivo: **Vocabulario → Asignaturas guardadas en GitHub → Traer a este dispositivo**.
 
 ## Cómo añadir una unidad
 1. En la app, escribe el nombre de la unidad y pulsa **💾 Guardar unidad en archivo**.

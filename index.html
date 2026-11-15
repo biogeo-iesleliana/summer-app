@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APP SUMMER · Prototipo 0.6</title>
+<title>APP SUMMER · Prototipo 0.7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -66,7 +66,7 @@
 </head>
 <body>
 <header>
-  <h1>APP SUMMER <span class="muted">prototipo 0.6</span></h1>
+  <h1>APP SUMMER <span class="muted">prototipo 0.7</span></h1>
   <button data-v="vocab" class="on">1 · Vocabulario</button>
   <button data-v="ajustes">2 · Ajustes</button>
   <button data-v="sesion">3 · Sesión</button>
@@ -79,13 +79,18 @@
     <p>Escribe una palabra y pulsa <b>Buscar</b>. Toca el pictograma que mejor la represente, o pulsa <b>📷 Foto propia</b> para usar una foto (desde la galería o la cámara de la tablet). La imagen marcada en verde es la que verá la alumna.</p>
     <div class="word" style="background:#f3f7ff">
       <div class="row">
-        <label>Unidad: <input id="unitName" placeholder="p. ej. Las plantas" autocomplete="off"></label>
+        <label><b>Asignatura:</b> <select id="subjSel" class="subjSel"></select></label>
+        <button class="b" id="subjNew">＋ Nueva asignatura</button>
+        <button class="b" id="subjDel">Borrar</button>
+      </div>
+      <div class="row">
+        <label>Nombre: <input id="unitName" placeholder="p. ej. Biología y Geología" autocomplete="off"></label>
         <button class="b p" id="ghSave">☁️ Guardar en GitHub</button>
         <span class="muted" id="unitMsg"></span>
       </div>
       <div class="row">
-        <select id="repoUnits"><option value="">Unidades guardadas en GitHub…</option></select>
-        <button class="b" id="loadRepo">Cargar</button>
+        <select id="repoUnits"><option value="">Asignaturas guardadas en GitHub…</option></select>
+        <button class="b" id="loadRepo">Traer a este dispositivo</button>
         <button class="b" id="refreshRepo" title="Actualizar la lista">↻</button>
       </div>
       <details>
@@ -101,7 +106,7 @@
           <label class="b" style="cursor:pointer">📂 Abrir archivo<input type="file" accept=".json,application/json" hidden id="openUnit"></label>
         </div>
       </details>
-      <p class="muted">La unidad (palabras, pictogramas, fotos y bloques) se guarda en la carpeta <b>unidades</b> del repositorio y se puede cargar desde cualquier dispositivo. El registro de la alumna <b>no</b> se sube: se queda solo en este dispositivo. El repositorio es público: no subas fotos de personas.</p>
+      <p class="muted">Cada asignatura (palabras, pictogramas, fotos y bloques) se guarda en la carpeta <b>unidades</b> del repositorio y se puede traer a cualquier dispositivo. En un mismo dispositivo puede haber varias asignaturas: cambia de una a otra con el desplegable. El registro de la alumna <b>no</b> se sube: se queda solo en este dispositivo. El repositorio es público: no subas fotos de personas.</p>
     </div>
     <div class="word">
       <div class="row"><b>Bloques temáticos</b> <span id="blockInfo" class="muted"></span></div>
@@ -146,6 +151,9 @@
 
   <!-- SESIÓN -->
   <section id="sesion" class="view">
+    <label class="f">Asignatura
+      <select id="sessSubj" class="subjSel"></select>
+    </label>
     <label class="f">Bloque temático
       <select id="sessBlock"></select>
     </label>
@@ -165,6 +173,9 @@
 
   <!-- REGISTRO -->
   <section id="registro" class="view">
+    <label class="f">Asignatura
+      <select id="logSubj"></select>
+    </label>
     <div id="regTable"></div>
     <div class="row">
       <button class="b" id="csv">Descargar registro (CSV)</button>
@@ -189,8 +200,7 @@
   Pictogramas: autor Sergio Palao. Procedencia: <a href="https://arasaac.org" target="_blank" rel="noopener">ARASAAC</a>. Licencia CC BY-NC-SA, propiedad del Gobierno de Aragón. · Código: GPL-3.0
 </footer>
 
-<script>
-"use strict";
+<script type="module">
 /* ---------- estado y guardado (solo en este dispositivo) ---------- */
 const KEY = "appsummer.v0";
 const DEFAULT = {
@@ -198,11 +208,45 @@ const DEFAULT = {
   settings: {mode:"touch", n:2, scan:3, laps:2, deb:0.8, rate:0.9},
   log: []
 };
-let S;
-try { S = JSON.parse(localStorage.getItem(KEY)) || structuredClone(DEFAULT); } catch(e){ S = structuredClone(DEFAULT); }
+/* Todo se guarda en IndexedDB (mucho más espacio que localStorage, necesario para varias asignaturas con fotos) */
+const DB = {
+  db: null,
+  open(){ return new Promise((res, rej) => { const r = indexedDB.open("appsummer", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(this.db = r.result); r.onerror = () => rej(r.error); }); },
+  get(k){ return new Promise((res, rej) => { const q = this.db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  set(k, v){ return new Promise((res, rej) => { const tx = this.db.transaction("kv", "readwrite"); tx.objectStore("kv").put(v, k); tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); }
+};
+let S, raw = null;
+try { await DB.open(); raw = await DB.get("state"); } catch(e){ DB.db = null; }
+if (!raw) { try { raw = localStorage.getItem(KEY); } catch(e){} }   // datos de versiones anteriores
+try { S = raw ? JSON.parse(raw) : structuredClone(DEFAULT); } catch(e){ S = structuredClone(DEFAULT); }
 S.settings = Object.assign({}, DEFAULT.settings, S.settings);
-S.bloques ||= [];
-function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+S.log ||= [];
+// varias asignaturas: S.asignaturas = { id: {nombre, words, bloques} }, S.actual = id de la asignatura abierta
+const newId = () => "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+if (!S.asignaturas){
+  const id = newId();
+  S.asignaturas = { [id]: { nombre: S.unitName || "", words: S.words || [], bloques: S.bloques || [] } };
+  S.actual = id;
+  // las respuestas antiguas pasan a esta asignatura
+  S.log.forEach(r => r.asignaturaId ||= id);
+  delete S.words; delete S.bloques; delete S.unitName;
+}
+if (!S.asignaturas[S.actual]) S.actual = Object.keys(S.asignaturas)[0];
+const cur = () => S.asignaturas[S.actual];
+// S.words, S.bloques y S.unitName apuntan siempre a la asignatura abierta (no se guardan aparte)
+for (const [k, f] of [["words","words"], ["bloques","bloques"], ["unitName","nombre"]])
+  Object.defineProperty(S, k, { get: () => cur()[f], set: v => { cur()[f] = v; }, enumerable: false, configurable: true });
+Object.values(S.asignaturas).forEach(a => { a.words ||= []; a.bloques ||= []; });
+const subjName = id => (S.asignaturas[id]?.nombre) || "Sin nombre";
+
+let saveTimer = null;
+function save(){ clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 250); }
+async function saveNow(){
+  const data = JSON.stringify(S);
+  if (DB.db){ try { await DB.set("state", data); return true; } catch(e){} }
+  try { localStorage.setItem(KEY, data); return true; } catch(e){ return false; }
+}
 
 const $ = s => document.querySelector(s);
 const pic = id => `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
@@ -307,7 +351,7 @@ $("#delBlock").onclick = () => {
   $("#viewBlock").value = ""; save(); renderAll();
 };
 const inBlock = (w, b) => !b || (w.bloques || []).includes(b);
-function renderAll(){ renderBlocks(); renderWords(); }
+function renderAll(){ renderSubjects(); renderBlocks(); renderWords(); }
 
 function renderWords(){
   const box = $("#words"); box.innerHTML = "";
@@ -368,8 +412,7 @@ function renderWords(){
       try {
         const old = w.foto, oldUse = w.useFoto;
         w.foto = await getter(); w.useFoto = true;
-        try { localStorage.setItem(KEY, JSON.stringify(S)); }
-        catch(err){ w.foto = old; w.useFoto = oldUse; alertIn(d, "No queda espacio para más fotos en este dispositivo."); }
+        if (!(await saveNow())){ w.foto = old; w.useFoto = oldUse; alertIn(d, "No queda espacio para más fotos en este dispositivo."); }
         renderWords();
       } catch(err){ alertIn(d, err.message); }
     };
@@ -392,11 +435,42 @@ const REPO = (() => {
   const path = location.pathname.split("/").filter(Boolean)[0];
   return m && path ? `${m[1]}/${path}` : "biogeo-iesleliana/summer-app";
 })();
-const slug = s => (s || "unidad").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "unidad";
+const slug = s => (s || "asignatura").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "unidad";
 const msg = t => { $("#unitMsg").textContent = t; if (t) setTimeout(() => { if ($("#unitMsg").textContent === t) $("#unitMsg").textContent = ""; }, 6000); };
 
-$("#unitName").value = S.unitName || "";
-$("#unitName").onchange = e => { S.unitName = e.target.value.trim(); save(); };
+$("#unitName").onchange = e => { S.unitName = e.target.value.trim(); save(); renderSubjects(); };
+
+/* ---------- asignaturas en este dispositivo ---------- */
+function renderSubjects(){
+  const ids = Object.keys(S.asignaturas).sort((a, b) => subjName(a).localeCompare(subjName(b), "es"));
+  document.querySelectorAll(".subjSel").forEach(sel => {
+    sel.innerHTML = ids.map(id => `<option value="${id}">${subjName(id)} (${S.asignaturas[id].words.length})</option>`).join("");
+    sel.value = S.actual;
+  });
+  const ls = $("#logSubj"), v = ls.value;
+  ls.innerHTML = `<option value="">Todas las asignaturas</option>` + ids.map(id => `<option value="${id}">${subjName(id)}</option>`).join("");
+  ls.value = ids.includes(v) ? v : S.actual;
+  $("#unitName").value = S.unitName || "";
+  const del = $("#subjDel"); del.textContent = "Borrar"; delete del.dataset.c; del.hidden = ids.length < 2;
+}
+function switchSubject(id){
+  if (!S.asignaturas[id]) return;
+  S.actual = id; pendingUnit = null; $("#loadRepo").textContent = "Traer a este dispositivo";
+  $("#viewBlock").value = ""; $("#sessBlock").value = "";
+  save(); renderAll();
+}
+document.querySelectorAll(".subjSel").forEach(sel => sel.onchange = () => switchSubject(sel.value));
+$("#subjNew").onclick = () => {
+  const id = newId(); S.asignaturas[id] = { nombre: "", words: [], bloques: [] };
+  switchSubject(id); $("#unitName").focus(); msg("Escribe el nombre de la nueva asignatura.");
+};
+$("#subjDel").onclick = () => {
+  const del = $("#subjDel");
+  if (Object.keys(S.asignaturas).length < 2) return;
+  if (!del.dataset.c){ del.dataset.c = 1; del.textContent = `¿Borrar «${subjName(S.actual)}» de este dispositivo? (en GitHub no se borra) Pulsa otra vez`; return; }
+  delete S.asignaturas[S.actual]; S.actual = Object.keys(S.asignaturas)[0];
+  save(); renderAll();
+};
 
 /* ---- GitHub: guardar y cargar unidades en la carpeta unidades/ del repositorio ----
    Para escribir hace falta una clave (token) de GitHub limitada a este repositorio con permiso «Contents: read and write».
@@ -410,7 +484,7 @@ $("#ghTokenDel").onclick = () => { try { localStorage.removeItem(TOKEN_KEY); } c
 showGhStatus();
 
 function unitData(){
-  return { formato: "app-summer-unidad", version: 1, nombre: S.unitName || "Unidad", guardada: new Date().toISOString(),
+  return { formato: "app-summer-unidad", version: 1, nombre: S.unitName || "Asignatura", guardada: new Date().toISOString(),
     bloques: S.bloques, palabras: S.words.map(w => ({ texto: w.texto, pictoId: w.pictoId, cands: w.cands, foto: w.foto, useFoto: !!w.useFoto, bloques: w.bloques || [] })) };
 }
 function b64utf8(str){   // base64 de texto UTF-8, por trozos para archivos grandes
@@ -420,7 +494,7 @@ function b64utf8(str){   // base64 de texto UTF-8, por trozos para archivos gran
 }
 
 $("#ghSave").onclick = async () => {
-  if (!S.unitName){ msg("Escribe primero el nombre de la unidad."); $("#unitName").focus(); return; }
+  if (!S.unitName){ msg("Escribe primero el nombre de la asignatura."); $("#unitName").focus(); return; }
   if (!getToken()){ msg("Falta la clave de GitHub: ábrela en «Más opciones»."); document.querySelector("details").open = true; return; }
   const path = `unidades/${slug(S.unitName)}.json`, api = `https://api.github.com/repos/${REPO}/contents/${path}`;
   const btn = $("#ghSave"); btn.disabled = true; btn.textContent = "Guardando…";
@@ -428,11 +502,11 @@ $("#ghSave").onclick = async () => {
     let sha;   // si la unidad ya existe, hace falta su identificador para actualizarla
     const old = await fetch(api, { headers: ghHeaders(), cache: "no-store" });
     if (old.ok) sha = (await old.json()).sha;
-    const body = { message: `Unidad «${S.unitName}» (${S.words.length} palabras)`, content: b64utf8(JSON.stringify(unitData(), null, 1)) };
+    const body = { message: `Asignatura «${S.unitName}» (${S.words.length} palabras)`, content: b64utf8(JSON.stringify(unitData(), null, 1)) };
     if (sha) body.sha = sha;
     const r = await fetch(api, { method: "PUT", headers: ghHeaders({ "Content-Type": "application/json" }), body: JSON.stringify(body) });
     if (r.status === 401 || r.status === 403) throw new Error("GitHub no acepta la clave (caducada o sin permiso de escritura).");
-    if (r.status === 409 || r.status === 422) throw new Error("La unidad cambió en GitHub mientras tanto. Vuelve a pulsar «Guardar».");
+    if (r.status === 409 || r.status === 422) throw new Error("La asignatura cambió en GitHub mientras tanto. Vuelve a pulsar «Guardar».");
     if (!r.ok) throw new Error(`GitHub respondió con un error (${r.status}).`);
     msg(`✓ «${S.unitName}» guardada en GitHub.`); listRepoUnits();
   } catch(e){ msg(e.message || "No se pudo conectar con GitHub."); }
@@ -447,19 +521,26 @@ $("#saveUnit").onclick = () => {
   msg("Copia guardada en Descargas.");
 };
 
-let pendingUnit = null;   // carga en dos pasos para no borrar sin querer la unidad actual
+let pendingUnit = null;   // si ya existe una asignatura con ese nombre, se pide confirmación antes de sustituirla
+const sameName = nombre => Object.keys(S.asignaturas).find(id => subjName(id).trim().toLowerCase() === (nombre || "").trim().toLowerCase());
 function offerUnit(unit){
-  if (!unit || unit.formato !== "app-summer-unidad" || !Array.isArray(unit.palabras)) { msg("Ese archivo no es una unidad de APP SUMMER."); return; }
+  if (!unit || unit.formato !== "app-summer-unidad" || !Array.isArray(unit.palabras)) { msg("Ese archivo no es una asignatura de APP SUMMER."); return; }
   pendingUnit = unit;
-  if (!S.words.length) return applyUnit();
-  $("#loadRepo").textContent = `¿Sustituir las palabras actuales por «${unit.nombre}»? Pulsa otra vez`;
+  const id = sameName(unit.nombre);
+  if (!id || !S.asignaturas[id].words.length) return applyUnit();
+  $("#loadRepo").textContent = `«${unit.nombre}» ya está en este dispositivo. ¿Sustituirla por la de GitHub? Pulsa otra vez`;
 }
-function applyUnit(){
-  const u = pendingUnit; pendingUnit = null; $("#loadRepo").textContent = "Cargar";
-  S.unitName = u.nombre; S.bloques = u.bloques || [...new Set(u.palabras.flatMap(p => p.bloques || []))];
-  S.words = u.palabras.map(p => ({ texto: p.texto, pictoId: p.pictoId ?? null, cands: p.cands || [], foto: p.foto, useFoto: !!p.useFoto, bloques: p.bloques || [] }));
-  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){ msg("Unidad cargada, pero no cabe entera en este dispositivo (demasiadas fotos)."); }
-  $("#unitName").value = u.nombre; renderAll(); msg(`Unidad «${u.nombre}» cargada.`);
+async function applyUnit(){
+  const u = pendingUnit; pendingUnit = null; $("#loadRepo").textContent = "Traer a este dispositivo";
+  const id = sameName(u.nombre) || newId();
+  S.asignaturas[id] = {
+    nombre: u.nombre,
+    bloques: u.bloques || [...new Set(u.palabras.flatMap(p => p.bloques || []))],
+    words: u.palabras.map(p => ({ texto: p.texto, pictoId: p.pictoId ?? null, cands: p.cands || [], foto: p.foto, useFoto: !!p.useFoto, bloques: p.bloques || [] }))
+  };
+  S.actual = id;
+  const ok = await saveNow();
+  renderAll(); msg(ok ? `«${u.nombre}» está en este dispositivo.` : "Se ha abierto, pero no cabe en este dispositivo (demasiadas fotos).");
 }
 
 $("#openUnit").onchange = async e => {
@@ -473,19 +554,19 @@ async function listRepoUnits(){
     const r = await fetch(`https://api.github.com/repos/${REPO}/contents/unidades`, { headers: ghHeaders(), cache: "no-store" });
     if (!r.ok) throw 0;
     const files = (await r.json()).filter(f => f.name.endsWith(".json"));
-    sel.innerHTML = `<option value="">Unidades guardadas en GitHub (${files.length})…</option>` +
+    sel.innerHTML = `<option value="">Asignaturas guardadas en GitHub (${files.length})…</option>` +
       files.map(f => `<option value="${f.url}">${f.name.replace(/\.json$/, "")}</option>`).join("");
   } catch(e){ sel.innerHTML = `<option value="">Sin conexión con GitHub</option>`; }
 }
 $("#refreshRepo").onclick = listRepoUnits;
 $("#loadRepo").onclick = async () => {
   if (pendingUnit) return applyUnit();
-  const url = $("#repoUnits").value; if (!url) { msg("Elige primero una unidad de la lista."); return; }
+  const url = $("#repoUnits").value; if (!url) { msg("Elige primero una asignatura de la lista."); return; }
   try {   // se pide el contenido directamente a la API para obtener siempre la última versión
     const r = await fetch(url, { headers: ghHeaders({ "Accept": "application/vnd.github.raw+json" }), cache: "no-store" });
     if (!r.ok) throw 0;
     offerUnit(await r.json());
-  } catch(e){ msg("No se pudo descargar la unidad."); }
+  } catch(e){ msg("No se pudo descargar la asignatura."); }
 };
 listRepoUnits();
 
@@ -542,7 +623,7 @@ $("#start").onclick = () => {
   if (usable.length < needs) { alertBox(blk ? `El bloque «${blk}» necesita al menos ${needs} palabras con imagen.` : "Hacen falta al menos 2 palabras con imagen."); return; }
   let queue = usable;
   if (act === "repaso"){
-    const seen = new Set(S.log.map(r => r.palabra));
+    const seen = new Set(S.log.filter(r => r.asignaturaId === S.actual).map(r => r.palabra));
     const prev = usable.filter(w => seen.has(w.texto));
     if (prev.length >= 2) queue = prev;
   }
@@ -721,7 +802,7 @@ function showReward(ms){ return new Promise(r => { const el = $("#reward"); el.c
 
 const ACT_NAMES = {donde:"¿Dónde está?", escucha:"Escucha y elige", lee:"Lee y elige", nombre:"¿Cómo se llama?"};
 function record(palabra, resultado, ayuda){
-  S.log.push({ sesion: sess.id, fecha: new Date().toISOString(), palabra, actividad: ACT_NAMES[sess.item.type] || sess.item.type, opciones: sess.options.length, modo: S.settings.mode, resultado, ayuda });
+  S.log.push({ sesion: sess.id, fecha: new Date().toISOString(), asignaturaId: S.actual, asignatura: subjName(S.actual), palabra, actividad: ACT_NAMES[sess.item.type] || sess.item.type, opciones: sess.options.length, modo: S.settings.mode, resultado, ayuda });
   save();
 }
 
@@ -736,26 +817,29 @@ $("#eSkip").onclick = () => { if (!sess) return; sess.i++; nextItem(); };
 $("#eEnd").onclick = endSession;
 
 /* ---------- registro ---------- */
+const logRows = () => { const f = $("#logSubj").value; return S.log.filter(r => !f || r.asignaturaId === f); };
+$("#logSubj").onchange = () => renderLog();
 function renderLog(){
   const by = {};
-  S.log.forEach(r => { const b = by[r.palabra] ||= {sola:0,"con ayuda":0,error:0,"sin respuesta":0}; b[r.resultado]++; });
+  logRows().forEach(r => { const b = by[r.palabra] ||= {sola:0,"con ayuda":0,error:0,"sin respuesta":0}; b[r.resultado]++; });
   const rows = Object.entries(by).map(([p, b]) => {
     const total = b.sola + b["con ayuda"] + b.error + b["sin respuesta"];
     const pct = total ? Math.round(100 * b.sola / total) : 0;
     return `<tr><td>${p}</td><td>${b.sola}</td><td>${b["con ayuda"]}</td><td>${b.error}</td><td>${b["sin respuesta"]}</td><td>${pct} %</td></tr>`;
   }).join("");
-  $("#regTable").innerHTML = S.log.length
+  $("#regTable").innerHTML = logRows().length
     ? `<table><tr><th>Palabra</th><th>Acierto sola</th><th>Con ayuda</th><th>Error</th><th>Sin respuesta</th><th>% sola</th></tr>${rows}</table>`
     : `<p class="muted">Todavía no hay respuestas registradas.</p>`;
 }
 $("#csv").onclick = () => {
-  const head = "sesion,fecha,palabra,actividad,opciones,modo,resultado,ayuda";
-  const csv = [head, ...S.log.map(r => [r.sesion, r.fecha, r.palabra, r.actividad ?? r.nivel, r.opciones, r.modo, r.resultado, r.ayuda].join(","))].join("\n");
+  const head = "sesion,fecha,asignatura,palabra,actividad,opciones,modo,resultado,ayuda";
+  const csv = [head, ...logRows().map(r => [r.sesion, r.fecha, (r.asignatura || subjName(r.asignaturaId)).replace(/,/g, " "), r.palabra, r.actividad ?? r.nivel, r.opciones, r.modo, r.resultado, r.ayuda].join(","))].join("\n");
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], {type:"text/csv"})); a.download = "registro-app-summer.csv"; a.click();
 };
-$("#clearLog").onclick = () => { if ($("#clearLog").dataset.c){ S.log = []; save(); renderLog(); delete $("#clearLog").dataset.c; $("#clearLog").textContent = "Borrar registro"; } else { $("#clearLog").dataset.c = 1; $("#clearLog").textContent = "¿Seguro? Pulsa otra vez"; } };
+$("#clearLog").onclick = () => { if ($("#clearLog").dataset.c){ const f = $("#logSubj").value; S.log = f ? S.log.filter(r => r.asignaturaId !== f) : []; save(); renderLog(); delete $("#clearLog").dataset.c; $("#clearLog").textContent = "Borrar registro"; } else { $("#clearLog").dataset.c = 1; $("#clearLog").textContent = "¿Seguro? Pulsa otra vez"; } };
 
 renderAll();
+window.APP = { get S(){ return S; }, save, saveNow, renderAll, compressImage, kb, switchSubject };
 </script>
 </body>
 </html>
