@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APP SUMMER · Prototipo 0.5.2</title>
+<title>APP SUMMER · Prototipo 0.6</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -66,7 +66,7 @@
 </head>
 <body>
 <header>
-  <h1>APP SUMMER <span class="muted">prototipo 0.5.2</span></h1>
+  <h1>APP SUMMER <span class="muted">prototipo 0.6</span></h1>
   <button data-v="vocab" class="on">1 · Vocabulario</button>
   <button data-v="ajustes">2 · Ajustes</button>
   <button data-v="sesion">3 · Sesión</button>
@@ -80,16 +80,28 @@
     <div class="word" style="background:#f3f7ff">
       <div class="row">
         <label>Unidad: <input id="unitName" placeholder="p. ej. Las plantas" autocomplete="off"></label>
-        <button class="b" id="saveUnit">💾 Guardar unidad en archivo</button>
-        <label class="b" style="cursor:pointer">📂 Abrir archivo<input type="file" accept=".json,application/json" hidden id="openUnit"></label>
-      </div>
-      <div class="row">
-        <select id="repoUnits"><option value="">Unidades del repositorio…</option></select>
-        <button class="b" id="loadRepo">Cargar</button>
-        <button class="b" id="refreshRepo" title="Actualizar la lista">↻</button>
+        <button class="b p" id="ghSave">☁️ Guardar en GitHub</button>
         <span class="muted" id="unitMsg"></span>
       </div>
-      <p class="muted">Para compartir una unidad: guárdala en archivo y súbela a la carpeta <b>unidades</b> del repositorio. Así se puede cargar desde cualquier dispositivo. El registro de la alumna <b>no</b> se guarda en la unidad: se queda solo en este dispositivo. No subas fotos de personas: el repositorio es público.</p>
+      <div class="row">
+        <select id="repoUnits"><option value="">Unidades guardadas en GitHub…</option></select>
+        <button class="b" id="loadRepo">Cargar</button>
+        <button class="b" id="refreshRepo" title="Actualizar la lista">↻</button>
+      </div>
+      <details>
+        <summary class="muted" style="cursor:pointer">Más opciones (clave de GitHub, copia en archivo)</summary>
+        <div class="row">
+          <span id="ghStatus" class="muted"></span>
+          <input id="ghToken" type="password" placeholder="Pega aquí la clave de GitHub (github_pat_…)" autocomplete="off" style="flex:1;min-width:260px">
+          <button class="b" id="ghTokenSave">Guardar clave</button>
+          <button class="b" id="ghTokenDel">Quitar clave</button>
+        </div>
+        <div class="row">
+          <button class="b" id="saveUnit">💾 Guardar copia en archivo</button>
+          <label class="b" style="cursor:pointer">📂 Abrir archivo<input type="file" accept=".json,application/json" hidden id="openUnit"></label>
+        </div>
+      </details>
+      <p class="muted">La unidad (palabras, pictogramas, fotos y bloques) se guarda en la carpeta <b>unidades</b> del repositorio y se puede cargar desde cualquier dispositivo. El registro de la alumna <b>no</b> se sube: se queda solo en este dispositivo. El repositorio es público: no subas fotos de personas.</p>
     </div>
     <div class="word">
       <div class="row"><b>Bloques temáticos</b> <span id="blockInfo" class="muted"></span></div>
@@ -386,13 +398,53 @@ const msg = t => { $("#unitMsg").textContent = t; if (t) setTimeout(() => { if (
 $("#unitName").value = S.unitName || "";
 $("#unitName").onchange = e => { S.unitName = e.target.value.trim(); save(); };
 
-$("#saveUnit").onclick = () => {
-  const unit = { formato: "app-summer-unidad", version: 1, nombre: S.unitName || "Unidad",
+/* ---- GitHub: guardar y cargar unidades en la carpeta unidades/ del repositorio ----
+   Para escribir hace falta una clave (token) de GitHub limitada a este repositorio con permiso «Contents: read and write».
+   La clave se guarda solo en este dispositivo y nunca va dentro de las unidades. */
+const TOKEN_KEY = "appsummer.githubToken";
+const getToken = () => { try { return localStorage.getItem(TOKEN_KEY) || ""; } catch(e){ return ""; } };
+const ghHeaders = (extra = {}) => { const t = getToken(); return Object.assign({ "Accept": "application/vnd.github+json" }, t ? { "Authorization": `Bearer ${t}` } : {}, extra); };
+function showGhStatus(){ $("#ghStatus").textContent = getToken() ? "🔑 Clave guardada en este dispositivo." : "Sin clave: se puede cargar, pero no guardar en GitHub."; }
+$("#ghTokenSave").onclick = () => { const t = $("#ghToken").value.trim(); if (!t) return; try { localStorage.setItem(TOKEN_KEY, t); } catch(e){} $("#ghToken").value = ""; showGhStatus(); msg("Clave guardada."); };
+$("#ghTokenDel").onclick = () => { try { localStorage.removeItem(TOKEN_KEY); } catch(e){} showGhStatus(); msg("Clave quitada de este dispositivo."); };
+showGhStatus();
+
+function unitData(){
+  return { formato: "app-summer-unidad", version: 1, nombre: S.unitName || "Unidad", guardada: new Date().toISOString(),
     bloques: S.bloques, palabras: S.words.map(w => ({ texto: w.texto, pictoId: w.pictoId, cands: w.cands, foto: w.foto, useFoto: !!w.useFoto, bloques: w.bloques || [] })) };
+}
+function b64utf8(str){   // base64 de texto UTF-8, por trozos para archivos grandes
+  const bytes = new TextEncoder().encode(str); let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
+$("#ghSave").onclick = async () => {
+  if (!S.unitName){ msg("Escribe primero el nombre de la unidad."); $("#unitName").focus(); return; }
+  if (!getToken()){ msg("Falta la clave de GitHub: ábrela en «Más opciones»."); document.querySelector("details").open = true; return; }
+  const path = `unidades/${slug(S.unitName)}.json`, api = `https://api.github.com/repos/${REPO}/contents/${path}`;
+  const btn = $("#ghSave"); btn.disabled = true; btn.textContent = "Guardando…";
+  try {
+    let sha;   // si la unidad ya existe, hace falta su identificador para actualizarla
+    const old = await fetch(api, { headers: ghHeaders(), cache: "no-store" });
+    if (old.ok) sha = (await old.json()).sha;
+    const body = { message: `Unidad «${S.unitName}» (${S.words.length} palabras)`, content: b64utf8(JSON.stringify(unitData(), null, 1)) };
+    if (sha) body.sha = sha;
+    const r = await fetch(api, { method: "PUT", headers: ghHeaders({ "Content-Type": "application/json" }), body: JSON.stringify(body) });
+    if (r.status === 401 || r.status === 403) throw new Error("GitHub no acepta la clave (caducada o sin permiso de escritura).");
+    if (r.status === 409 || r.status === 422) throw new Error("La unidad cambió en GitHub mientras tanto. Vuelve a pulsar «Guardar».");
+    if (!r.ok) throw new Error(`GitHub respondió con un error (${r.status}).`);
+    msg(`✓ «${S.unitName}» guardada en GitHub.`); listRepoUnits();
+  } catch(e){ msg(e.message || "No se pudo conectar con GitHub."); }
+  finally { btn.disabled = false; btn.textContent = "☁️ Guardar en GitHub"; }
+};
+
+$("#saveUnit").onclick = () => {
+  const unit = unitData();
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(unit, null, 1)], {type: "application/json"}));
   a.download = slug(unit.nombre) + ".json"; a.click();
-  msg("Archivo guardado en Descargas.");
+  msg("Copia guardada en Descargas.");
 };
 
 let pendingUnit = null;   // carga en dos pasos para no borrar sin querer la unidad actual
@@ -418,18 +470,22 @@ $("#openUnit").onchange = async e => {
 async function listRepoUnits(){
   const sel = $("#repoUnits");
   try {
-    const r = await fetch(`https://api.github.com/repos/${REPO}/contents/unidades`);
+    const r = await fetch(`https://api.github.com/repos/${REPO}/contents/unidades`, { headers: ghHeaders(), cache: "no-store" });
     if (!r.ok) throw 0;
     const files = (await r.json()).filter(f => f.name.endsWith(".json"));
-    sel.innerHTML = `<option value="">Unidades del repositorio (${files.length})…</option>` +
-      files.map(f => `<option value="${f.download_url}">${f.name.replace(/\.json$/, "")}</option>`).join("");
-  } catch(e){ sel.innerHTML = `<option value="">Sin conexión con el repositorio</option>`; }
+    sel.innerHTML = `<option value="">Unidades guardadas en GitHub (${files.length})…</option>` +
+      files.map(f => `<option value="${f.url}">${f.name.replace(/\.json$/, "")}</option>`).join("");
+  } catch(e){ sel.innerHTML = `<option value="">Sin conexión con GitHub</option>`; }
 }
 $("#refreshRepo").onclick = listRepoUnits;
 $("#loadRepo").onclick = async () => {
   if (pendingUnit) return applyUnit();
   const url = $("#repoUnits").value; if (!url) { msg("Elige primero una unidad de la lista."); return; }
-  try { const r = await fetch(url); offerUnit(await r.json()); } catch(e){ msg("No se pudo descargar la unidad."); }
+  try {   // se pide el contenido directamente a la API para obtener siempre la última versión
+    const r = await fetch(url, { headers: ghHeaders({ "Accept": "application/vnd.github.raw+json" }), cache: "no-store" });
+    if (!r.ok) throw 0;
+    offerUnit(await r.json());
+  } catch(e){ msg("No se pudo descargar la unidad."); }
 };
 listRepoUnits();
 
