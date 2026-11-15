@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APP SUMMER · Prototipo 0.1</title>
+<title>APP SUMMER · Prototipo 0.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#f7f7f2;--ink:#1d1d1d;--muted:#5b5b5b;--card:#fff;--line:#d9d9d0;--acc:#1f6feb;--ok:#1a7f37;--scan:#ffb300;}
   *{box-sizing:border-box}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-size:18px}
-  header{display:flex;gap:.5rem;align-items:center;padding:.6rem 1rem;background:#fff;border-bottom:1px solid var(--line)}
+  header{display:flex;gap:.5rem;align-items:center;padding:.6rem 1rem;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
   header h1{font-size:1.1rem;margin:0 1rem 0 0}
   header button{font:inherit;padding:.5rem .9rem;border:1px solid var(--line);background:#fff;border-radius:10px;cursor:pointer}
   header button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
@@ -26,17 +26,25 @@
   .cand.sel{border-color:var(--ok);box-shadow:0 0 0 3px #b9e6c4}
   .cand img{width:100%;height:100%;object-fit:contain}
   .muted{color:var(--muted);font-size:.9rem}
-  label.f{display:grid;gap:.25rem;margin:.6rem 0;max-width:420px}
+  label.f{display:grid;gap:.25rem;margin:.6rem 0;max-width:520px}
+  .acts{display:grid;gap:.5rem;max-width:620px;margin:.8rem 0}
+  .acts label{display:flex;gap:.6rem;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:12px;padding:.6rem .8rem;cursor:pointer}
+  .acts input{margin-top:.3rem;transform:scale(1.3)}
+  .acts small{display:block;color:var(--muted)}
   /* ---- pantalla de la alumna ---- */
   #stage{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;z-index:10}
   #stage.on{display:flex}
-  #prompt{text-align:center;font-size:2.2rem;font-weight:700;padding:1rem;min-height:4.5rem;text-transform:uppercase;letter-spacing:.03em}
-  #grid{flex:1;display:grid;gap:3vmin;padding:3vmin;grid-template-columns:repeat(2,1fr)}
+  #prompt{text-align:center;font-size:2.2rem;font-weight:700;padding:1rem;min-height:4.5rem;text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;justify-content:center}
+  #prompt.big{font-size:4rem}
+  #prompt img{height:28vh;max-width:80vw;object-fit:contain}
+  #grid{flex:1;display:grid;gap:3vmin;padding:3vmin;grid-template-columns:repeat(2,1fr);min-height:0}
   #grid.n1{grid-template-columns:1fr}
   #grid.n3{grid-template-columns:repeat(3,1fr)}
   .opt{border:6px solid #e3e3dc;border-radius:28px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2vmin;touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer;min-height:0}
   .opt img{max-width:100%;max-height:100%;flex:1;object-fit:contain;min-height:0;pointer-events:none}
-  .opt span{font-size:2rem;font-weight:700;text-transform:uppercase;margin-top:.5rem}
+  .opt span{font-size:2rem;font-weight:700;text-transform:uppercase;margin-top:.5rem;pointer-events:none}
+  .opt.wordonly span{font-size:3.4rem;margin:0}
+  .opt .hand{font-size:22vmin}
   .opt.scan{border-color:var(--scan);outline:12px solid var(--scan);outline-offset:-2px}
   .opt.blink{animation:blink 1s infinite}
   @keyframes blink{50%{background:#fff4c2}}
@@ -54,7 +62,7 @@
 </head>
 <body>
 <header>
-  <h1>APP SUMMER <span class="muted">prototipo 0.1</span></h1>
+  <h1>APP SUMMER <span class="muted">prototipo 0.2</span></h1>
   <button data-v="vocab" class="on">1 · Vocabulario</button>
   <button data-v="ajustes">2 · Ajustes</button>
   <button data-v="sesion">3 · Sesión</button>
@@ -98,12 +106,16 @@
 
   <!-- SESIÓN -->
   <section id="sesion" class="view">
-    <label class="f">Actividad
-      <select id="sLevel">
-        <option value="1">Nivel 1 · Presentación (escuchar las palabras)</option>
-        <option value="2" selected>Nivel 2–3 · ¿Dónde está…? (elegir)</option>
-      </select>
-    </label>
+    <p><b>Elige la actividad</b></p>
+    <div class="acts" id="acts">
+      <label><input type="radio" name="act" value="causa"><span><b>0 · Causa-efecto</b><small>Toca o pulsa y aparece un pictograma con su nombre. Para calentar y comprobar el pulsador.</small></span></label>
+      <label><input type="radio" name="act" value="presenta"><span><b>1 · Presentación</b><small>Ve el pictograma y oye la palabra. Cada toque o pulsación pasa a la siguiente.</small></span></label>
+      <label><input type="radio" name="act" value="donde" checked><span><b>2 · ¿Dónde está…?</b><small>Oye y lee la pregunta y elige el pictograma.</small></span></label>
+      <label><input type="radio" name="act" value="escucha"><span><b>3 · Escucha y elige</b><small>Solo voz, sin palabra escrita: comprensión oral.</small></span></label>
+      <label><input type="radio" name="act" value="lee"><span><b>4 · Lee y elige</b><small>Ve la palabra escrita y elige su pictograma (lectura global).</small></span></label>
+      <label><input type="radio" name="act" value="nombre"><span><b>5 · ¿Cómo se llama?</b><small>Ve el pictograma y elige su palabra escrita. En barrido no se leen las opciones en voz alta.</small></span></label>
+      <label><input type="radio" name="act" value="repaso"><span><b>6 · Repaso mezclado</b><small>Mezcla las actividades 2–5 con las palabras ya trabajadas.</small></span></label>
+    </div>
     <p class="muted">La sesión usa las palabras que tienen pictograma elegido. La barra inferior es para la educadora.</p>
     <button class="b p" id="start" style="font-size:1.3rem;padding:1rem 2rem">▶ Empezar sesión</button>
   </section>
@@ -150,6 +162,7 @@ function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} 
 
 const $ = s => document.querySelector(s);
 const pic = id => `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
+const wait = ms => new Promise(r => setTimeout(r, ms));
 
 /* ---------- navegación ---------- */
 document.querySelectorAll("header button").forEach(b => b.onclick = () => {
@@ -222,6 +235,8 @@ function say(text, {volume=1} = {}){
 }
 
 /* ---------- sesión ---------- */
+const CHOICE_TYPES = ["donde","escucha","lee","nombre"];
+const isChoice = t => CHOICE_TYPES.includes(t);
 let sess = null;           // estado de la sesión en curso
 let scanTimer = null;
 let lastInput = 0, inputLockedUntil = 0, scanSince = 0;
@@ -230,11 +245,18 @@ const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--){ co
 
 $("#start").onclick = () => {
   const usable = S.words.filter(w => w.pictoId);
-  const level = Number($("#sLevel").value);
-  if (usable.length < (level === 1 ? 1 : 2)) { alertBox("Hacen falta al menos 2 palabras con pictograma."); return; }
-  sess = { level, queue: shuffle(usable), i: 0, id: Date.now(), lastCorrectPos: [] };
+  const act = document.querySelector('input[name="act"]:checked').value;
+  const needs = (act === "causa" || act === "presenta") ? 1 : 2;
+  if (usable.length < needs) { alertBox("Hacen falta al menos 2 palabras con pictograma."); return; }
+  let queue = usable;
+  if (act === "repaso"){
+    const seen = new Set(S.log.map(r => r.palabra));
+    const prev = usable.filter(w => seen.has(w.texto));
+    if (prev.length >= 2) queue = prev;
+  }
+  sess = { act, pool: usable, queue: shuffle(queue), i: 0, id: Date.now(), lastCorrectPos: [] };
   $("#stage").classList.add("on");
-  try { document.documentElement.requestFullscreen?.(); } catch(e){}
+  try { document.documentElement.requestFullscreen?.().catch(() => {}); } catch(e){}
   nextItem();
 };
 function alertBox(msg){ const p = document.createElement("p"); p.textContent = msg; p.style.color = "#b00"; $("#sesion").appendChild(p); setTimeout(() => p.remove(), 4000); }
@@ -242,7 +264,7 @@ function alertBox(msg){ const p = document.createElement("p"); p.textContent = m
 function stopScan(){ clearTimeout(scanTimer); scanTimer = null; document.querySelectorAll(".opt").forEach(o => o.classList.remove("scan")); }
 
 function endSession(){
-  stopScan(); speechSynthesis?.cancel(); sess = null;
+  stopScan(); if ("speechSynthesis" in window) speechSynthesis.cancel(); sess = null;
   $("#stage").classList.remove("on");
   try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
   document.querySelector('header button[data-v="registro"]').click();
@@ -251,47 +273,84 @@ function endSession(){
 function nextItem(){
   stopScan();
   if (!sess) return;
-  if (sess.i >= sess.queue.length) { say("¡Has terminado! ¡Muy bien!"); showReward(1800).then(endSession); return; }
+  if (sess.i >= sess.queue.length) { lock(); say("¡Has terminado! ¡Muy bien!"); showReward(1800).then(endSession); return; }
   const target = sess.queue[sess.i];
-  sess.item = { target, attempts: 0, help: 0, eduHelp: false };
+  const type = sess.act === "repaso" ? CHOICE_TYPES[Math.floor(Math.random() * CHOICE_TYPES.length)] : sess.act;
+  sess.item = { target, type, attempts: 0, help: 0, eduHelp: false };
   $("#eHelp").classList.remove("on");
-  sess.level === 1 ? showPresentation(target) : showChoice(target);
+  const P = $("#prompt"); P.className = ""; P.innerHTML = "";
+  if (type === "causa") showCause();
+  else if (type === "presenta") showPresentation(target);
+  else showChoice(target, type);
 }
 
-function makeOpt(w){
-  const d = document.createElement("div"); d.className = "opt";
-  d.innerHTML = `<img alt="" src="${pic(w.pictoId)}"><span>${w.texto}</span>`;
+/* show: "both" (pictograma + palabra), "picto" (solo pictograma), "word" (solo palabra) */
+function makeOpt(w, show = "both"){
+  const d = document.createElement("div"); d.className = "opt" + (show === "word" ? " wordonly" : "");
+  d.innerHTML = (show !== "word" ? `<img alt="" src="${pic(w.pictoId)}">` : "") + (show !== "picto" ? `<span>${w.texto}</span>` : "");
   d.dataset.word = w.texto; return d;
 }
-
-/* Nivel 1: presentación — cualquier toque o pulsación avanza */
-function showPresentation(w){
-  $("#prompt").textContent = w.texto;
+function singleCell(content){
   const g = $("#grid"); g.className = "n1"; g.innerHTML = "";
-  const o = makeOpt(w); o.querySelector("span").remove(); g.appendChild(o);
-  sess.options = [o]; sess.correctIdx = 0;
-  lock(); say(w.texto).then(() => say(w.texto)).then(unlock);
+  const o = document.createElement("div"); o.className = "opt"; o.innerHTML = content;
   o.onpointerup = () => accept(0);
+  g.appendChild(o); sess.options = [o]; sess.correctIdx = 0; return o;
 }
 
-/* Nivel 2–3: ¿Dónde está…? */
-function showChoice(w){
-  const n = Math.min(S.settings.n, S.words.filter(x => x.pictoId).length);
-  const others = shuffle(S.words.filter(x => x.pictoId && x.texto !== w.texto)).slice(0, n - 1);
+/* 0 · Causa-efecto: cualquier toque o pulsación muestra un pictograma */
+function showCause(){
+  singleCell(`<div class="hand">👋</div>`);
+  unlock();
+}
+async function revealCause(){
+  const w = sess.item.target, o = sess.options[0];
+  o.innerHTML = `<img alt="" src="${pic(w.pictoId)}"><span>${w.texto}</span>`;
+  lock(); await say(w.texto); await wait(900);
+  if (!sess) return;
+  sess.i++; nextItem();
+}
+
+/* 1 · Presentación */
+function showPresentation(w){
+  $("#prompt").textContent = w.texto;
+  singleCell(`<img alt="" src="${pic(w.pictoId)}">`);
+  lock(); say(w.texto).then(() => say(w.texto)).then(unlock);
+}
+
+/* 2–5 · Actividades de elección */
+function showChoice(w, type){
+  const n = Math.min(S.settings.n, sess.pool.length);
+  const others = shuffle(sess.pool.filter(x => x.texto !== w.texto)).slice(0, n - 1);
   // posición de la correcta: aleatoria, sin repetir la misma más de 2 veces seguidas
-  let pos; do { pos = Math.floor(Math.random() * n); } while (sess.lastCorrectPos.slice(-2).filter(p => p === pos).length === 2);
+  let pos; do { pos = Math.floor(Math.random() * n); } while (n > 1 && sess.lastCorrectPos.slice(-2).filter(p => p === pos).length === 2);
   sess.lastCorrectPos.push(pos);
   const items = others.slice(); items.splice(pos, 0, w);
+  const show = type === "donde" ? "both" : type === "nombre" ? "word" : "picto";
   const g = $("#grid"); g.className = n === 3 ? "n3" : ""; g.innerHTML = "";
-  sess.options = items.map((it, k) => { const o = makeOpt(it); o.onpointerup = () => accept(k); g.appendChild(o); return o; });
+  sess.options = items.map((it, k) => { const o = makeOpt(it, show); o.onpointerup = () => accept(k); g.appendChild(o); return o; });
   sess.correctIdx = pos;
-  $("#prompt").textContent = `¿Dónde está ${w.texto}?`;
+  const P = $("#prompt");
+  if (type === "donde") P.textContent = `¿Dónde está ${w.texto}?`;
+  else if (type === "escucha") P.textContent = "🔊";
+  else if (type === "lee") { P.textContent = w.texto; P.className = "big"; }
+  else P.innerHTML = `<img alt="" src="${pic(w.pictoId)}">`;
   ask();
+}
+
+function question(){
+  const it = sess.item, t = it.target.texto;
+  switch (it.type){
+    case "donde": case "escucha": return `¿Dónde está ${t}?`;
+    case "lee": return it.help > 0 ? `Pone: ${t}. Busca su dibujo.` : "Lee la palabra y busca su dibujo.";
+    case "nombre": return it.help > 0 ? `Es ${t}. Busca su nombre.` : "¿Cómo se llama? Busca su nombre.";
+  }
+  return t;
 }
 
 async function ask(){
   stopScan(); lock();
-  await say(`¿Dónde está ${sess.item.target.texto}?`);
+  await say(question());
+  if (!sess) return;
   unlock();
   if (S.settings.mode === "scan") startScan();
 }
@@ -303,14 +362,16 @@ function unlock(){ inputLockedUntil = Date.now() + 200; }
 /* ---------- barrido ---------- */
 function startScan(){
   const opts = sess.options.map((o, k) => ({o, k})).filter(x => !x.o.classList.contains("hidden"));
+  const speakOptions = sess.item.type !== "nombre";   // en «¿Cómo se llama?» leer las opciones daría la respuesta
   let step = -1, laps = 0;
   const tick = () => {
+    if (!sess) return;
     step++;
     if (step >= opts.length){ step = 0; laps++; }
-    if (laps >= S.settings.laps && sess.level !== 1){ stopScan(); noResponse(); return; }
+    if (laps >= S.settings.laps){ stopScan(); noResponse(); return; }
     document.querySelectorAll(".opt").forEach(o => o.classList.remove("scan"));
     const cur = opts[step]; cur.o.classList.add("scan"); sess.scanIdx = cur.k; scanSince = Date.now();
-    if (sess.level !== 1) say(cur.o.dataset.word, {volume: .6});
+    if (speakOptions) say(cur.o.dataset.word, {volume: .6});
     scanTimer = setTimeout(tick, S.settings.scan * 1000);
   };
   tick();
@@ -321,11 +382,11 @@ document.addEventListener("keydown", e => {
   if (e.key !== " " && e.key !== "Enter") return;
   e.preventDefault();
   if (e.repeat) return;
-  if (S.settings.mode === "scan" && sess.level !== 1) {
-    if (scanTimer == null) return;
+  if (isChoice(sess.item.type)) {
+    if (S.settings.mode !== "scan" || scanTimer == null) return;
     if (Date.now() - scanSince < 300) return;     // pausa mínima de aceptación
     accept(sess.scanIdx, true);
-  } else accept(sess.level === 1 ? 0 : sess.scanIdx ?? -1, true);
+  } else accept(0, true);
 });
 
 /* ---------- respuesta ---------- */
@@ -334,19 +395,20 @@ function accept(k, fromSwitch=false){
   const now = Date.now();
   if (now < inputLockedUntil) return;
   if (now - lastInput < S.settings.deb * 1000) return;
-  if (S.settings.mode === "scan" && !fromSwitch && sess.level !== 1) return;  // en barrido solo cuenta el pulsador
-  if (k < 0 || sess.options[k]?.classList.contains("hidden")) return;
+  const it = sess.item;
+  if (S.settings.mode === "scan" && !fromSwitch && isChoice(it.type)) return;  // en barrido solo cuenta el pulsador
+  if (k == null || k < 0 || sess.options[k]?.classList.contains("hidden")) return;
   lastInput = now;
   stopScan();
 
-  if (sess.level === 1){ sess.i++; nextItem(); return; }
+  if (it.type === "causa"){ revealCause(); return; }
+  if (it.type === "presenta"){ sess.i++; nextItem(); return; }
 
-  const it = sess.item;
   if (k === sess.correctIdx){
     const result = (it.help > 0 || it.eduHelp) ? "con ayuda" : "sola";
     record(it.target.texto, result, it.help);
     lock();
-    say(`¡Muy bien! ${it.target.texto}`).then(() => showReward(900)).then(() => { sess.i++; nextItem(); });
+    say(`¡Muy bien! ${it.target.texto}`).then(() => showReward(900)).then(() => { if (!sess) return; sess.i++; nextItem(); });
   } else {
     it.attempts++;
     record(it.target.texto, "error", it.help);
@@ -355,23 +417,28 @@ function accept(k, fromSwitch=false){
 }
 function noResponse(){ const it = sess.item; it.attempts++; record(it.target.texto, "sin respuesta", it.help); giveHelp(); }
 
-/* escalera de ayudas: 1 repetir · 2 la correcta parpadea · 3 solo queda la correcta */
+/* escalera de ayudas: 1 repetir (en lectura, se dice la palabra) · 2 la correcta parpadea · 3 solo queda la correcta */
 function giveHelp(){
   const it = sess.item; it.help = Math.min(3, it.attempts);
   if (it.help >= 2) sess.options[sess.correctIdx].classList.add("blink");
   if (it.help >= 3) sess.options.forEach((o, k) => { if (k !== sess.correctIdx) o.classList.add("hidden"); });
-  lock(); say("Vamos a probar otra vez.").then(ask);
+  lock(); say("Vamos a probar otra vez.").then(() => { if (sess) ask(); });
 }
 
 function showReward(ms){ return new Promise(r => { const el = $("#reward"); el.classList.add("on"); setTimeout(() => { el.classList.remove("on"); r(); }, ms); }); }
 
+const ACT_NAMES = {donde:"¿Dónde está?", escucha:"Escucha y elige", lee:"Lee y elige", nombre:"¿Cómo se llama?"};
 function record(palabra, resultado, ayuda){
-  S.log.push({ sesion: sess.id, fecha: new Date().toISOString(), palabra, nivel: sess.level, opciones: sess.options.length, modo: S.settings.mode, resultado, ayuda });
+  S.log.push({ sesion: sess.id, fecha: new Date().toISOString(), palabra, actividad: ACT_NAMES[sess.item.type] || sess.item.type, opciones: sess.options.length, modo: S.settings.mode, resultado, ayuda });
   save();
 }
 
 /* barra de la educadora */
-$("#eRepeat").onclick = () => { if (sess?.level === 1) say(sess.item.target.texto); else if (sess) ask(); };
+$("#eRepeat").onclick = () => {
+  if (!sess?.item) return;
+  const t = sess.item.type;
+  if (isChoice(t)) ask(); else if (t === "presenta") say(sess.item.target.texto);
+};
 $("#eHelp").onclick = () => { if (!sess?.item) return; sess.item.eduHelp = !sess.item.eduHelp; $("#eHelp").classList.toggle("on", sess.item.eduHelp); };
 $("#eSkip").onclick = () => { if (!sess) return; sess.i++; nextItem(); };
 $("#eEnd").onclick = endSession;
@@ -381,7 +448,8 @@ function renderLog(){
   const by = {};
   S.log.forEach(r => { const b = by[r.palabra] ||= {sola:0,"con ayuda":0,error:0,"sin respuesta":0}; b[r.resultado]++; });
   const rows = Object.entries(by).map(([p, b]) => {
-    const tot = b.sola + b["con ayuda"]; const pct = tot ? Math.round(100 * b.sola / (tot + b.error + b["sin respuesta"])) : 0;
+    const total = b.sola + b["con ayuda"] + b.error + b["sin respuesta"];
+    const pct = total ? Math.round(100 * b.sola / total) : 0;
     return `<tr><td>${p}</td><td>${b.sola}</td><td>${b["con ayuda"]}</td><td>${b.error}</td><td>${b["sin respuesta"]}</td><td>${pct} %</td></tr>`;
   }).join("");
   $("#regTable").innerHTML = S.log.length
@@ -389,9 +457,9 @@ function renderLog(){
     : `<p class="muted">Todavía no hay respuestas registradas.</p>`;
 }
 $("#csv").onclick = () => {
-  const head = "sesion,fecha,palabra,nivel,opciones,modo,resultado,ayuda";
-  const csv = [head, ...S.log.map(r => [r.sesion, r.fecha, r.palabra, r.nivel, r.opciones, r.modo, r.resultado, r.ayuda].join(","))].join("\n");
-  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"})); a.download = "registro-app-summer.csv"; a.click();
+  const head = "sesion,fecha,palabra,actividad,opciones,modo,resultado,ayuda";
+  const csv = [head, ...S.log.map(r => [r.sesion, r.fecha, r.palabra, r.actividad ?? r.nivel, r.opciones, r.modo, r.resultado, r.ayuda].join(","))].join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], {type:"text/csv"})); a.download = "registro-app-summer.csv"; a.click();
 };
 $("#clearLog").onclick = () => { if ($("#clearLog").dataset.c){ S.log = []; save(); renderLog(); delete $("#clearLog").dataset.c; $("#clearLog").textContent = "Borrar registro"; } else { $("#clearLog").dataset.c = 1; $("#clearLog").textContent = "¿Seguro? Pulsa otra vez"; } };
 
