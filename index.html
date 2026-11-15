@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APP SUMMER · Prototipo 0.4</title>
+<title>APP SUMMER · Prototipo 0.5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -57,12 +57,16 @@
   @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
   table{border-collapse:collapse;width:100%;background:#fff}
   th,td{border:1px solid var(--line);padding:.4rem .6rem;text-align:left}
+  .chip{font:inherit;font-size:.9rem;padding:.3rem .7rem;border-radius:999px;border:1px solid var(--line);background:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem}
+  .chip.on{background:#e3f1e6;border-color:#7cc08e}
+  .chipx{font:inherit;font-size:.8rem;border:0;background:transparent;cursor:pointer;color:#a00;padding:0 .2rem}
+  .row.chips{margin:.5rem 0 0}
   footer{font-size:.75rem;color:var(--muted);padding:1rem;text-align:center}
 </style>
 </head>
 <body>
 <header>
-  <h1>APP SUMMER <span class="muted">prototipo 0.4</span></h1>
+  <h1>APP SUMMER <span class="muted">prototipo 0.5</span></h1>
   <button data-v="vocab" class="on">1 · Vocabulario</button>
   <button data-v="ajustes">2 · Ajustes</button>
   <button data-v="sesion">3 · Sesión</button>
@@ -86,6 +90,15 @@
         <span class="muted" id="unitMsg"></span>
       </div>
       <p class="muted">Para compartir una unidad: guárdala en archivo y súbela a la carpeta <b>unidades</b> del repositorio. Así se puede cargar desde cualquier dispositivo. El registro de la alumna <b>no</b> se guarda en la unidad: se queda solo en este dispositivo. No subas fotos de personas: el repositorio es público.</p>
+    </div>
+    <div class="word">
+      <div class="row"><b>Bloques temáticos</b> <span id="blockChips" class="row" style="margin:0"></span></div>
+      <div class="row">
+        <input id="newBlock" placeholder="p. ej. Vegetales" autocomplete="off">
+        <button class="b" id="addBlock">Añadir bloque</button>
+        <label>Ver: <select id="viewBlock"></select></label>
+      </div>
+      <p class="muted">Toca los bloques que aparecen debajo de cada palabra para incluirla o quitarla. Una palabra puede estar en varios bloques. Si estás viendo un bloque, las palabras nuevas se añaden a ese bloque.</p>
     </div>
     <div class="row">
       <input id="newWord" placeholder="p. ej. raíz" autocomplete="off">
@@ -120,6 +133,9 @@
 
   <!-- SESIÓN -->
   <section id="sesion" class="view">
+    <label class="f">Bloque temático
+      <select id="sessBlock"></select>
+    </label>
     <p><b>Elige la actividad</b></p>
     <div class="acts" id="acts">
       <label><input type="radio" name="act" value="causa"><span><b>0 · Causa-efecto</b><small>Toca o pulsa y aparece un pictograma con su nombre. Para calentar y comprobar el pulsador.</small></span></label>
@@ -172,6 +188,7 @@ const DEFAULT = {
 let S;
 try { S = JSON.parse(localStorage.getItem(KEY)) || structuredClone(DEFAULT); } catch(e){ S = structuredClone(DEFAULT); }
 S.settings = Object.assign({}, DEFAULT.settings, S.settings);
+S.bloques ||= [];
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
 
 const $ = s => document.querySelector(s);
@@ -181,23 +198,58 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const imgOf = w => (w.useFoto && w.foto) ? w.foto : pic(w.pictoId);
 const hasImg = w => !!(w.pictoId || (w.useFoto && w.foto));
 
-/* reduce la foto (lado mayor 600 px, JPEG) para que ocupe poco y se guarde en el dispositivo */
-function loadPhoto(file){
+/* ---------- optimización de imágenes ----------
+   Objetivo: nítida a pantalla completa en una tablet y ≤ ~90 KB.
+   Lado mayor 800 px; WebP si el navegador lo admite (≈30 % menos que JPEG); se baja la calidad
+   y, si hace falta, el tamaño hasta cumplir el objetivo. */
+const IMG_MAX = 800, IMG_TARGET = 90 * 1024;
+const SUPPORTS_WEBP = (() => { try { return document.createElement("canvas").toDataURL("image/webp").startsWith("data:image/webp"); } catch(e){ return false; } })();
+const dataUrlBytes = d => Math.round((d.length - d.indexOf(",") - 1) * 3 / 4);
+const kb = d => Math.round(dataUrlBytes(d) / 1024);
+
+function blobToImage(blob){
   return new Promise((res, rej) => {
-    const url = URL.createObjectURL(file);
-    const im = new Image();
-    im.onload = () => {
-      const k = Math.min(1, 600 / Math.max(im.width, im.height));
-      const c = document.createElement("canvas");
-      c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
-      const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
-      ctx.drawImage(im, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url);
-      res(c.toDataURL("image/jpeg", 0.75));
-    };
-    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error("No se pudo abrir la imagen")); };
+    const url = URL.createObjectURL(blob), im = new Image();
+    im.onload = () => { URL.revokeObjectURL(url); res(im); };
+    im.onerror = () => { URL.revokeObjectURL(url); rej(new Error("No se pudo abrir la imagen.")); };
     im.src = url;
   });
+}
+async function compressImage(blob){
+  const im = await blobToImage(blob);
+  const type = SUPPORTS_WEBP ? "image/webp" : "image/jpeg";
+  let side = IMG_MAX, out = "";
+  for (let round = 0; round < 3; round++, side = Math.round(side * 0.8)){
+    const k = Math.min(1, side / Math.max(im.width, im.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+    const ctx = c.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.imageSmoothingQuality = "high"; ctx.drawImage(im, 0, 0, c.width, c.height);
+    for (const q of [0.82, 0.72, 0.62]){
+      out = c.toDataURL(type, q);
+      if (dataUrlBytes(out) <= IMG_TARGET) return out;
+    }
+  }
+  return out;   // la mejor que se ha conseguido
+}
+const loadPhoto = file => compressImage(file);
+
+/* imagen desde una dirección web: primero directa; si la web no lo permite (CORS),
+   a través del servicio público images.weserv.nl, que solo recibe la dirección de la imagen */
+async function loadPhotoFromUrl(url){
+  url = url.trim();
+  if (!/^https?:\/\//i.test(url)) throw new Error("La dirección debe empezar por http:// o https://");
+  const tries = [url, `https://images.weserv.nl/?url=${encodeURIComponent(url.replace(/^https?:\/\//i, ""))}&w=${IMG_MAX}&h=${IMG_MAX}&fit=inside`];
+  for (const u of tries){
+    try {
+      const r = await fetch(u);
+      if (!r.ok) continue;
+      const blob = await r.blob();
+      if (!blob.type.startsWith("image/")) continue;
+      return await compressImage(blob);
+    } catch(e){ /* probar la siguiente */ }
+  }
+  throw new Error("No se pudo descargar esa imagen. Comprueba que la dirección es de una imagen (termina en .jpg, .png…) o descárgala y usa «📷 Foto propia».");
 }
 
 /* ---------- navegación ---------- */
@@ -222,13 +274,41 @@ async function propose(w){
 }
 
 /* ---------- vocabulario ---------- */
+/* ---------- bloques temáticos ---------- */
+function renderBlocks(){
+  const box = $("#blockChips"); box.innerHTML = "";
+  S.bloques.forEach(name => {
+    const n = S.words.filter(w => (w.bloques || []).includes(name)).length;
+    const ch = document.createElement("span"); ch.className = "chip on";
+    ch.innerHTML = `${name} <small>(${n})</small> `;
+    const x = document.createElement("button"); x.className = "chipx"; x.title = "Borrar bloque"; x.textContent = "✕";
+    x.onclick = () => {
+      if (x.dataset.c){ S.bloques = S.bloques.filter(b => b !== name); S.words.forEach(w => w.bloques = (w.bloques || []).filter(b => b !== name)); save(); renderAll(); }
+      else { x.dataset.c = 1; x.textContent = "¿Borrar?"; }
+    };
+    ch.appendChild(x); box.appendChild(ch);
+  });
+  // listas desplegables de filtro (vocabulario y sesión)
+  for (const sel of [$("#viewBlock"), $("#sessBlock")]){
+    const v = sel.value;
+    sel.innerHTML = `<option value="">Todos los bloques</option>` + S.bloques.map(b => `<option>${b}</option>`).join("");
+    sel.value = S.bloques.includes(v) ? v : "";
+  }
+}
+const inBlock = (w, b) => !b || (w.bloques || []).includes(b);
+function renderAll(){ renderBlocks(); renderWords(); }
+
 function renderWords(){
   const box = $("#words"); box.innerHTML = "";
+  const view = $("#viewBlock").value;
   S.words.forEach((w, i) => {
+    if (!inBlock(w, view)) return;
     const d = document.createElement("div"); d.className = "word";
     d.innerHTML = `<h3><span>${w.texto}</span><span>
         <label class="b" style="display:inline-block;cursor:pointer">📷 Foto propia<input type="file" accept="image/*" hidden data-a="f"></label>
-        <button class="b" data-a="s">Buscar otra vez</button> <button class="b" data-a="x">Quitar</button></span></h3>`;
+        <button class="b" data-a="u">🔗 Imagen web</button>
+        <button class="b" data-a="s">Buscar otra vez</button> <button class="b" data-a="x">Quitar</button></span></h3>
+      <div class="row" data-a="urlrow" hidden><input data-a="url" placeholder="Pega la dirección de la imagen (https://…)" style="flex:1;min-width:240px"><button class="b p" data-a="ok">Añadir</button></div>`;
     const c = document.createElement("div"); c.className = "cands";
     if (!w.cands.length && !w.foto) c.innerHTML = `<span class="muted">${w.pictoId ? "" : "Sin pictogramas todavía. Pulsa «Buscar otra vez» (necesita internet) o usa una foto propia."}</span>`;
     const ids = w.cands.length ? w.cands : (w.pictoId ? [w.pictoId] : []);
@@ -240,22 +320,44 @@ function renderWords(){
     });
     if (w.foto){
       const b = document.createElement("button"); b.className = "cand" + (w.useFoto ? " sel" : "");
-      b.title = "Foto propia"; b.innerHTML = `<img alt="Foto: ${w.texto}" src="${w.foto}">`;
+      b.title = `Foto propia · ${kb(w.foto)} KB`; b.innerHTML = `<img alt="Foto: ${w.texto}" src="${w.foto}">`;
       b.onclick = () => { w.useFoto = true; save(); renderWords(); };
       c.appendChild(b);
+      const size = document.createElement("span"); size.className = "muted"; size.textContent = `${kb(w.foto)} KB`;
+      c.appendChild(size);
       const del = document.createElement("button"); del.className = "b"; del.textContent = "Quitar foto";
       del.onclick = () => { delete w.foto; w.useFoto = false; save(); renderWords(); };
       c.appendChild(del);
     }
     d.appendChild(c);
-    d.querySelector('[data-a="f"]').onchange = async e => {
-      const f = e.target.files[0]; if (!f) return;
+    // bloques temáticos de esta palabra (una palabra puede estar en varios)
+    w.bloques ||= [];
+    if (S.bloques.length){
+      const bl = document.createElement("div"); bl.className = "row chips";
+      bl.innerHTML = `<span class="muted">Bloques:</span>`;
+      S.bloques.forEach(name => {
+        const ch = document.createElement("button"); ch.className = "chip" + (w.bloques.includes(name) ? " on" : "");
+        ch.textContent = name;
+        ch.onclick = () => { w.bloques = w.bloques.includes(name) ? w.bloques.filter(x => x !== name) : [...w.bloques, name]; save(); renderWords(); };
+        bl.appendChild(ch);
+      });
+      d.appendChild(bl);
+    }
+    const setPhoto = async getter => {
       try {
-        w.foto = await loadPhoto(f); w.useFoto = true;
+        const old = w.foto, oldUse = w.useFoto;
+        w.foto = await getter(); w.useFoto = true;
         try { localStorage.setItem(KEY, JSON.stringify(S)); }
-        catch(err){ delete w.foto; w.useFoto = false; alertIn(d, "No queda espacio para más fotos en este dispositivo."); }
+        catch(err){ w.foto = old; w.useFoto = oldUse; alertIn(d, "No queda espacio para más fotos en este dispositivo."); }
         renderWords();
       } catch(err){ alertIn(d, err.message); }
+    };
+    d.querySelector('[data-a="f"]').onchange = e => { const f = e.target.files[0]; if (f) setPhoto(() => loadPhoto(f)); };
+    d.querySelector('[data-a="u"]').onclick = () => { const r = d.querySelector('[data-a="urlrow"]'); r.hidden = !r.hidden; if (!r.hidden) d.querySelector('[data-a="url"]').focus(); };
+    d.querySelector('[data-a="ok"]').onclick = () => {
+      const u = d.querySelector('[data-a="url"]').value; if (!u.trim()) return;
+      d.querySelector('[data-a="ok"]').textContent = "Descargando…";
+      setPhoto(() => loadPhotoFromUrl(u));
     };
     d.querySelector('[data-a="s"]').onclick = () => propose(w);
     d.querySelector('[data-a="x"]').onclick = () => { S.words.splice(i,1); save(); renderWords(); };
@@ -277,7 +379,7 @@ $("#unitName").onchange = e => { S.unitName = e.target.value.trim(); save(); };
 
 $("#saveUnit").onclick = () => {
   const unit = { formato: "app-summer-unidad", version: 1, nombre: S.unitName || "Unidad",
-    palabras: S.words.map(w => ({ texto: w.texto, pictoId: w.pictoId, cands: w.cands, foto: w.foto, useFoto: !!w.useFoto })) };
+    bloques: S.bloques, palabras: S.words.map(w => ({ texto: w.texto, pictoId: w.pictoId, cands: w.cands, foto: w.foto, useFoto: !!w.useFoto, bloques: w.bloques || [] })) };
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(unit, null, 1)], {type: "application/json"}));
   a.download = slug(unit.nombre) + ".json"; a.click();
@@ -293,9 +395,10 @@ function offerUnit(unit){
 }
 function applyUnit(){
   const u = pendingUnit; pendingUnit = null; $("#loadRepo").textContent = "Cargar";
-  S.unitName = u.nombre; S.words = u.palabras.map(p => ({ texto: p.texto, pictoId: p.pictoId ?? null, cands: p.cands || [], foto: p.foto, useFoto: !!p.useFoto }));
+  S.unitName = u.nombre; S.bloques = u.bloques || [...new Set(u.palabras.flatMap(p => p.bloques || []))];
+  S.words = u.palabras.map(p => ({ texto: p.texto, pictoId: p.pictoId ?? null, cands: p.cands || [], foto: p.foto, useFoto: !!p.useFoto, bloques: p.bloques || [] }));
   try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){ msg("Unidad cargada, pero no cabe entera en este dispositivo (demasiadas fotos)."); }
-  $("#unitName").value = u.nombre; renderWords(); msg(`Unidad «${u.nombre}» cargada.`);
+  $("#unitName").value = u.nombre; renderAll(); msg(`Unidad «${u.nombre}» cargada.`);
 }
 
 $("#openUnit").onchange = async e => {
@@ -324,9 +427,16 @@ listRepoUnits();
 function alertIn(el, msg){ const p = document.createElement("p"); p.textContent = msg; p.style.color = "#b00"; el.appendChild(p); setTimeout(() => p.remove(), 5000); }
 $("#addWord").onclick = () => {
   const t = $("#newWord").value.trim(); if (!t) return;
-  const w = {texto:t, pictoId:null, cands:[]}; S.words.push(w); $("#newWord").value = ""; propose(w);
+  const vb = $("#viewBlock").value; const w = {texto:t, pictoId:null, cands:[], bloques: vb ? [vb] : []}; S.words.push(w); $("#newWord").value = ""; propose(w);
 };
 $("#newWord").addEventListener("keydown", e => { if (e.key === "Enter") $("#addWord").click(); });
+$("#addBlock").onclick = () => {
+  const b = $("#newBlock").value.trim(); if (!b) return;
+  if (!S.bloques.some(x => x.toLowerCase() === b.toLowerCase())) S.bloques.push(b);
+  $("#newBlock").value = ""; save(); renderAll();
+};
+$("#newBlock").addEventListener("keydown", e => { if (e.key === "Enter") $("#addBlock").click(); });
+$("#viewBlock").onchange = renderWords;
 $("#fillAll").onclick = async () => { for (const w of S.words) if (!w.cands.length) await propose(w); };
 
 /* ---------- ajustes ---------- */
@@ -360,10 +470,11 @@ let lastInput = 0, inputLockedUntil = 0, scanSince = 0;
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
 
 $("#start").onclick = () => {
-  const usable = S.words.filter(hasImg);
+  const blk = $("#sessBlock").value;
+  const usable = S.words.filter(w => hasImg(w) && inBlock(w, blk));
   const act = document.querySelector('input[name="act"]:checked').value;
   const needs = (act === "causa" || act === "presenta") ? 1 : 2;
-  if (usable.length < needs) { alertBox("Hacen falta al menos 2 palabras con pictograma."); return; }
+  if (usable.length < needs) { alertBox(blk ? `El bloque «${blk}» necesita al menos ${needs} palabras con imagen.` : "Hacen falta al menos 2 palabras con imagen."); return; }
   let queue = usable;
   if (act === "repaso"){
     const seen = new Set(S.log.map(r => r.palabra));
@@ -579,7 +690,7 @@ $("#csv").onclick = () => {
 };
 $("#clearLog").onclick = () => { if ($("#clearLog").dataset.c){ S.log = []; save(); renderLog(); delete $("#clearLog").dataset.c; $("#clearLog").textContent = "Borrar registro"; } else { $("#clearLog").dataset.c = 1; $("#clearLog").textContent = "¿Seguro? Pulsa otra vez"; } };
 
-renderWords();
+renderAll();
 </script>
 </body>
 </html>
