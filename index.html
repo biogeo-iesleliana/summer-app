@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>APP SUMMER · Prototipo 0.1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#f7f7f2;--ink:#1d1d1d;--muted:#5b5b5b;--card:#fff;--line:#d9d9d0;--acc:#1f6feb;--ok:#1a7f37;--scan:#ffb300;}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-size:18px}
+  header{display:flex;gap:.5rem;align-items:center;padding:.6rem 1rem;background:#fff;border-bottom:1px solid var(--line)}
+  header h1{font-size:1.1rem;margin:0 1rem 0 0}
+  header button{font:inherit;padding:.5rem .9rem;border:1px solid var(--line);background:#fff;border-radius:10px;cursor:pointer}
+  header button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+  main{padding:1rem;max-width:1100px;margin:0 auto}
+  .view{display:none}.view.on{display:block}
+  .row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin:.5rem 0}
+  input,select,button.b{font:inherit;padding:.55rem .8rem;border:1px solid var(--line);border-radius:10px;background:#fff}
+  button.b{cursor:pointer}button.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+  .word{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:.7rem;margin:.6rem 0}
+  .word h3{margin:0 0 .4rem;font-size:1.2rem;display:flex;justify-content:space-between;align-items:center}
+  .cands{display:flex;gap:.6rem;flex-wrap:wrap}
+  .cand{width:120px;height:120px;border:3px solid var(--line);border-radius:12px;background:#fff;padding:6px;cursor:pointer}
+  .cand.sel{border-color:var(--ok);box-shadow:0 0 0 3px #b9e6c4}
+  .cand img{width:100%;height:100%;object-fit:contain}
+  .muted{color:var(--muted);font-size:.9rem}
+  label.f{display:grid;gap:.25rem;margin:.6rem 0;max-width:420px}
+  /* ---- pantalla de la alumna ---- */
+  #stage{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;z-index:10}
+  #stage.on{display:flex}
+  #prompt{text-align:center;font-size:2.2rem;font-weight:700;padding:1rem;min-height:4.5rem;text-transform:uppercase;letter-spacing:.03em}
+  #grid{flex:1;display:grid;gap:3vmin;padding:3vmin;grid-template-columns:repeat(2,1fr)}
+  #grid.n1{grid-template-columns:1fr}
+  #grid.n3{grid-template-columns:repeat(3,1fr)}
+  .opt{border:6px solid #e3e3dc;border-radius:28px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2vmin;touch-action:manipulation;user-select:none;-webkit-user-select:none;cursor:pointer;min-height:0}
+  .opt img{max-width:100%;max-height:100%;flex:1;object-fit:contain;min-height:0;pointer-events:none}
+  .opt span{font-size:2rem;font-weight:700;text-transform:uppercase;margin-top:.5rem}
+  .opt.scan{border-color:var(--scan);outline:12px solid var(--scan);outline-offset:-2px}
+  .opt.blink{animation:blink 1s infinite}
+  @keyframes blink{50%{background:#fff4c2}}
+  .opt.hidden{visibility:hidden}
+  #edubar{display:flex;gap:.6rem;justify-content:space-between;padding:.5rem 1rem;background:#f1f1ea;border-top:1px solid var(--line)}
+  #edubar button{font:inherit;font-size:.95rem;padding:.5rem .8rem;border-radius:10px;border:1px solid var(--line);background:#fff}
+  #edubar button.on{background:#fff0c2;border-color:#d4a800}
+  #reward{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.92);font-size:30vmin}
+  #reward.on{display:flex;animation:pop .5s ease-out}
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+  table{border-collapse:collapse;width:100%;background:#fff}
+  th,td{border:1px solid var(--line);padding:.4rem .6rem;text-align:left}
+  footer{font-size:.75rem;color:var(--muted);padding:1rem;text-align:center}
+</style>
+</head>
+<body>
+<header>
+  <h1>APP SUMMER <span class="muted">prototipo 0.1</span></h1>
+  <button data-v="vocab" class="on">1 · Vocabulario</button>
+  <button data-v="ajustes">2 · Ajustes</button>
+  <button data-v="sesion">3 · Sesión</button>
+  <button data-v="registro">4 · Registro</button>
+</header>
+
+<main>
+  <!-- VOCABULARIO -->
+  <section id="vocab" class="view on">
+    <p>Escribe una palabra y pulsa <b>Buscar</b>. Toca el pictograma que mejor la represente.</p>
+    <div class="row">
+      <input id="newWord" placeholder="p. ej. raíz" autocomplete="off">
+      <button class="b p" id="addWord">Buscar y añadir</button>
+      <button class="b" id="fillAll">Proponer pictogramas para todas</button>
+    </div>
+    <div id="words"></div>
+  </section>
+
+  <!-- AJUSTES -->
+  <section id="ajustes" class="view">
+    <label class="f">Forma de responder de la alumna
+      <select id="sMode"><option value="touch">Tocar la pantalla (tablet)</option><option value="scan">Pulsador con barrido (portátil)</option></select>
+    </label>
+    <label class="f">Número de opciones por pregunta
+      <select id="sN"><option>2</option><option>3</option><option>4</option></select>
+    </label>
+    <label class="f">Tiempo de barrido por opción (segundos)
+      <input id="sScan" type="number" min="1" max="8" step="0.5">
+    </label>
+    <label class="f">Vueltas de barrido antes de dar ayuda
+      <input id="sLaps" type="number" min="1" max="5" step="1">
+    </label>
+    <label class="f">Ignorar toques o pulsaciones repetidas durante (segundos)
+      <input id="sDeb" type="number" min="0" max="3" step="0.1">
+    </label>
+    <label class="f">Velocidad de la voz
+      <input id="sRate" type="number" min="0.5" max="1.3" step="0.05">
+    </label>
+    <p class="muted">Con pulsador: el pulsador debe enviar la tecla <b>Espacio</b> o <b>Intro</b>. Para probar sin pulsador, usa la barra espaciadora.</p>
+  </section>
+
+  <!-- SESIÓN -->
+  <section id="sesion" class="view">
+    <label class="f">Actividad
+      <select id="sLevel">
+        <option value="1">Nivel 1 · Presentación (escuchar las palabras)</option>
+        <option value="2" selected>Nivel 2–3 · ¿Dónde está…? (elegir)</option>
+      </select>
+    </label>
+    <p class="muted">La sesión usa las palabras que tienen pictograma elegido. La barra inferior es para la educadora.</p>
+    <button class="b p" id="start" style="font-size:1.3rem;padding:1rem 2rem">▶ Empezar sesión</button>
+  </section>
+
+  <!-- REGISTRO -->
+  <section id="registro" class="view">
+    <div id="regTable"></div>
+    <div class="row">
+      <button class="b" id="csv">Descargar registro (CSV)</button>
+      <button class="b" id="clearLog">Borrar registro</button>
+    </div>
+  </section>
+</main>
+
+<div id="stage">
+  <div id="prompt"></div>
+  <div id="grid"></div>
+  <div id="edubar">
+    <button id="eRepeat">🔊 Repetir</button>
+    <button id="eHelp">🤝 Respuesta con mi ayuda</button>
+    <button id="eSkip">⏭ Saltar</button>
+    <button id="eEnd">■ Terminar</button>
+  </div>
+  <div id="reward">⭐</div>
+</div>
+
+<footer>
+  Pictogramas: autor Sergio Palao. Procedencia: <a href="https://arasaac.org" target="_blank" rel="noopener">ARASAAC</a>. Licencia CC BY-NC-SA, propiedad del Gobierno de Aragón. · Código: GPL-3.0
+</footer>
+
+<script>
+"use strict";
+/* ---------- estado y guardado (solo en este dispositivo) ---------- */
+const KEY = "appsummer.v0";
+const DEFAULT = {
+  words: ["planta","raíz","hoja","flor","semilla","agua","sol"].map(t => ({texto:t, pictoId:null, cands:[]})),
+  settings: {mode:"touch", n:2, scan:3, laps:2, deb:0.8, rate:0.9},
+  log: []
+};
+let S;
+try { S = JSON.parse(localStorage.getItem(KEY)) || structuredClone(DEFAULT); } catch(e){ S = structuredClone(DEFAULT); }
+S.settings = Object.assign({}, DEFAULT.settings, S.settings);
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+
+const $ = s => document.querySelector(s);
+const pic = id => `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
+
+/* ---------- navegación ---------- */
+document.querySelectorAll("header button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("header button").forEach(x => x.classList.toggle("on", x === b));
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === b.dataset.v));
+  if (b.dataset.v === "registro") renderLog();
+});
+
+/* ---------- ARASAAC ---------- */
+async function searchArasaac(text){
+  const url = `https://api.arasaac.org/v1/pictograms/es/search/${encodeURIComponent(text.trim().toLowerCase())}`;
+  const r = await fetch(url);
+  if (!r.ok) return [];
+  const data = await r.json();
+  return data.slice(0, 3).map(p => p._id);
+}
+async function propose(w){
+  try { w.cands = await searchArasaac(w.texto); } catch(e){ w.cands = []; }
+  if (!w.pictoId && w.cands.length) w.pictoId = w.cands[0];
+  save(); renderWords();
+}
+
+/* ---------- vocabulario ---------- */
+function renderWords(){
+  const box = $("#words"); box.innerHTML = "";
+  S.words.forEach((w, i) => {
+    const d = document.createElement("div"); d.className = "word";
+    d.innerHTML = `<h3><span>${w.texto}</span><span><button class="b" data-a="s">Buscar otra vez</button> <button class="b" data-a="x">Quitar</button></span></h3>`;
+    const c = document.createElement("div"); c.className = "cands";
+    if (!w.cands.length) c.innerHTML = `<span class="muted">${w.pictoId ? "" : "Sin pictogramas todavía. Pulsa «Buscar otra vez» (necesita internet)."}</span>`;
+    const ids = w.cands.length ? w.cands : (w.pictoId ? [w.pictoId] : []);
+    ids.forEach(id => {
+      const b = document.createElement("button"); b.className = "cand" + (id === w.pictoId ? " sel" : "");
+      b.innerHTML = `<img alt="${w.texto}" src="${pic(id)}" loading="lazy">`;
+      b.onclick = () => { w.pictoId = id; save(); renderWords(); };
+      c.appendChild(b);
+    });
+    d.appendChild(c);
+    d.querySelector('[data-a="s"]').onclick = () => propose(w);
+    d.querySelector('[data-a="x"]').onclick = () => { S.words.splice(i,1); save(); renderWords(); };
+    box.appendChild(d);
+  });
+}
+$("#addWord").onclick = () => {
+  const t = $("#newWord").value.trim(); if (!t) return;
+  const w = {texto:t, pictoId:null, cands:[]}; S.words.push(w); $("#newWord").value = ""; propose(w);
+};
+$("#newWord").addEventListener("keydown", e => { if (e.key === "Enter") $("#addWord").click(); });
+$("#fillAll").onclick = async () => { for (const w of S.words) if (!w.cands.length) await propose(w); };
+
+/* ---------- ajustes ---------- */
+const bind = (sel, key, num=true) => { const el = $(sel); el.value = S.settings[key];
+  el.onchange = () => { S.settings[key] = num ? Number(el.value) : el.value; save(); }; };
+bind("#sMode","mode",false); bind("#sN","n"); bind("#sScan","scan"); bind("#sLaps","laps"); bind("#sDeb","deb"); bind("#sRate","rate");
+
+/* ---------- voz ---------- */
+let voice = null;
+function pickVoice(){ const v = speechSynthesis.getVoices(); voice = v.find(x => /^es[-_]ES/i.test(x.lang)) || v.find(x => /^es/i.test(x.lang)) || null; }
+if ("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+function say(text, {volume=1} = {}){
+  return new Promise(res => {
+    if (!("speechSynthesis" in window)) return res();
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "es-ES"; if (voice) u.voice = voice; u.rate = S.settings.rate; u.volume = volume;
+    let done = false; const fin = () => { if (!done){ done = true; res(); } };
+    u.onend = fin; u.onerror = fin; setTimeout(fin, 4000 + text.length * 120);
+    speechSynthesis.speak(u);
+  });
+}
+
+/* ---------- sesión ---------- */
+let sess = null;           // estado de la sesión en curso
+let scanTimer = null;
+let lastInput = 0, inputLockedUntil = 0, scanSince = 0;
+
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
+
+$("#start").onclick = () => {
+  const usable = S.words.filter(w => w.pictoId);
+  const level = Number($("#sLevel").value);
+  if (usable.length < (level === 1 ? 1 : 2)) { alertBox("Hacen falta al menos 2 palabras con pictograma."); return; }
+  sess = { level, queue: shuffle(usable), i: 0, id: Date.now(), lastCorrectPos: [] };
+  $("#stage").classList.add("on");
+  try { document.documentElement.requestFullscreen?.(); } catch(e){}
+  nextItem();
+};
+function alertBox(msg){ const p = document.createElement("p"); p.textContent = msg; p.style.color = "#b00"; $("#sesion").appendChild(p); setTimeout(() => p.remove(), 4000); }
+
+function stopScan(){ clearTimeout(scanTimer); scanTimer = null; document.querySelectorAll(".opt").forEach(o => o.classList.remove("scan")); }
+
+function endSession(){
+  stopScan(); speechSynthesis?.cancel(); sess = null;
+  $("#stage").classList.remove("on");
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
+  document.querySelector('header button[data-v="registro"]').click();
+}
+
+function nextItem(){
+  stopScan();
+  if (!sess) return;
+  if (sess.i >= sess.queue.length) { say("¡Has terminado! ¡Muy bien!"); showReward(1800).then(endSession); return; }
+  const target = sess.queue[sess.i];
+  sess.item = { target, attempts: 0, help: 0, eduHelp: false };
+  $("#eHelp").classList.remove("on");
+  sess.level === 1 ? showPresentation(target) : showChoice(target);
+}
+
+function makeOpt(w){
+  const d = document.createElement("div"); d.className = "opt";
+  d.innerHTML = `<img alt="" src="${pic(w.pictoId)}"><span>${w.texto}</span>`;
+  d.dataset.word = w.texto; return d;
+}
+
+/* Nivel 1: presentación — cualquier toque o pulsación avanza */
+function showPresentation(w){
+  $("#prompt").textContent = w.texto;
+  const g = $("#grid"); g.className = "n1"; g.innerHTML = "";
+  const o = makeOpt(w); o.querySelector("span").remove(); g.appendChild(o);
+  sess.options = [o]; sess.correctIdx = 0;
+  lock(); say(w.texto).then(() => say(w.texto)).then(unlock);
+  o.onpointerup = () => accept(0);
+}
+
+/* Nivel 2–3: ¿Dónde está…? */
+function showChoice(w){
+  const n = Math.min(S.settings.n, S.words.filter(x => x.pictoId).length);
+  const others = shuffle(S.words.filter(x => x.pictoId && x.texto !== w.texto)).slice(0, n - 1);
+  // posición de la correcta: aleatoria, sin repetir la misma más de 2 veces seguidas
+  let pos; do { pos = Math.floor(Math.random() * n); } while (sess.lastCorrectPos.slice(-2).filter(p => p === pos).length === 2);
+  sess.lastCorrectPos.push(pos);
+  const items = others.slice(); items.splice(pos, 0, w);
+  const g = $("#grid"); g.className = n === 3 ? "n3" : ""; g.innerHTML = "";
+  sess.options = items.map((it, k) => { const o = makeOpt(it); o.onpointerup = () => accept(k); g.appendChild(o); return o; });
+  sess.correctIdx = pos;
+  $("#prompt").textContent = `¿Dónde está ${w.texto}?`;
+  ask();
+}
+
+async function ask(){
+  stopScan(); lock();
+  await say(`¿Dónde está ${sess.item.target.texto}?`);
+  unlock();
+  if (S.settings.mode === "scan") startScan();
+}
+
+/* bloqueo de entrada mientras habla la app (evita respuestas accidentales) */
+function lock(){ inputLockedUntil = Infinity; }
+function unlock(){ inputLockedUntil = Date.now() + 200; }
+
+/* ---------- barrido ---------- */
+function startScan(){
+  const opts = sess.options.map((o, k) => ({o, k})).filter(x => !x.o.classList.contains("hidden"));
+  let step = -1, laps = 0;
+  const tick = () => {
+    step++;
+    if (step >= opts.length){ step = 0; laps++; }
+    if (laps >= S.settings.laps && sess.level !== 1){ stopScan(); noResponse(); return; }
+    document.querySelectorAll(".opt").forEach(o => o.classList.remove("scan"));
+    const cur = opts[step]; cur.o.classList.add("scan"); sess.scanIdx = cur.k; scanSince = Date.now();
+    if (sess.level !== 1) say(cur.o.dataset.word, {volume: .6});
+    scanTimer = setTimeout(tick, S.settings.scan * 1000);
+  };
+  tick();
+}
+
+document.addEventListener("keydown", e => {
+  if (!sess || !$("#stage").classList.contains("on")) return;
+  if (e.key !== " " && e.key !== "Enter") return;
+  e.preventDefault();
+  if (e.repeat) return;
+  if (S.settings.mode === "scan" && sess.level !== 1) {
+    if (scanTimer == null) return;
+    if (Date.now() - scanSince < 300) return;     // pausa mínima de aceptación
+    accept(sess.scanIdx, true);
+  } else accept(sess.level === 1 ? 0 : sess.scanIdx ?? -1, true);
+});
+
+/* ---------- respuesta ---------- */
+function accept(k, fromSwitch=false){
+  if (!sess) return;
+  const now = Date.now();
+  if (now < inputLockedUntil) return;
+  if (now - lastInput < S.settings.deb * 1000) return;
+  if (S.settings.mode === "scan" && !fromSwitch && sess.level !== 1) return;  // en barrido solo cuenta el pulsador
+  if (k < 0 || sess.options[k]?.classList.contains("hidden")) return;
+  lastInput = now;
+  stopScan();
+
+  if (sess.level === 1){ sess.i++; nextItem(); return; }
+
+  const it = sess.item;
+  if (k === sess.correctIdx){
+    const result = (it.help > 0 || it.eduHelp) ? "con ayuda" : "sola";
+    record(it.target.texto, result, it.help);
+    lock();
+    say(`¡Muy bien! ${it.target.texto}`).then(() => showReward(900)).then(() => { sess.i++; nextItem(); });
+  } else {
+    it.attempts++;
+    record(it.target.texto, "error", it.help);
+    giveHelp();
+  }
+}
+function noResponse(){ const it = sess.item; it.attempts++; record(it.target.texto, "sin respuesta", it.help); giveHelp(); }
+
+/* escalera de ayudas: 1 repetir · 2 la correcta parpadea · 3 solo queda la correcta */
+function giveHelp(){
+  const it = sess.item; it.help = Math.min(3, it.attempts);
+  if (it.help >= 2) sess.options[sess.correctIdx].classList.add("blink");
+  if (it.help >= 3) sess.options.forEach((o, k) => { if (k !== sess.correctIdx) o.classList.add("hidden"); });
+  lock(); say("Vamos a probar otra vez.").then(ask);
+}
+
+function showReward(ms){ return new Promise(r => { const el = $("#reward"); el.classList.add("on"); setTimeout(() => { el.classList.remove("on"); r(); }, ms); }); }
+
+function record(palabra, resultado, ayuda){
+  S.log.push({ sesion: sess.id, fecha: new Date().toISOString(), palabra, nivel: sess.level, opciones: sess.options.length, modo: S.settings.mode, resultado, ayuda });
+  save();
+}
+
+/* barra de la educadora */
+$("#eRepeat").onclick = () => { if (sess?.level === 1) say(sess.item.target.texto); else if (sess) ask(); };
+$("#eHelp").onclick = () => { if (!sess?.item) return; sess.item.eduHelp = !sess.item.eduHelp; $("#eHelp").classList.toggle("on", sess.item.eduHelp); };
+$("#eSkip").onclick = () => { if (!sess) return; sess.i++; nextItem(); };
+$("#eEnd").onclick = endSession;
+
+/* ---------- registro ---------- */
+function renderLog(){
+  const by = {};
+  S.log.forEach(r => { const b = by[r.palabra] ||= {sola:0,"con ayuda":0,error:0,"sin respuesta":0}; b[r.resultado]++; });
+  const rows = Object.entries(by).map(([p, b]) => {
+    const tot = b.sola + b["con ayuda"]; const pct = tot ? Math.round(100 * b.sola / (tot + b.error + b["sin respuesta"])) : 0;
+    return `<tr><td>${p}</td><td>${b.sola}</td><td>${b["con ayuda"]}</td><td>${b.error}</td><td>${b["sin respuesta"]}</td><td>${pct} %</td></tr>`;
+  }).join("");
+  $("#regTable").innerHTML = S.log.length
+    ? `<table><tr><th>Palabra</th><th>Acierto sola</th><th>Con ayuda</th><th>Error</th><th>Sin respuesta</th><th>% sola</th></tr>${rows}</table>`
+    : `<p class="muted">Todavía no hay respuestas registradas.</p>`;
+}
+$("#csv").onclick = () => {
+  const head = "sesion,fecha,palabra,nivel,opciones,modo,resultado,ayuda";
+  const csv = [head, ...S.log.map(r => [r.sesion, r.fecha, r.palabra, r.nivel, r.opciones, r.modo, r.resultado, r.ayuda].join(","))].join("\n");
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type:"text/csv"})); a.download = "registro-app-summer.csv"; a.click();
+};
+$("#clearLog").onclick = () => { if ($("#clearLog").dataset.c){ S.log = []; save(); renderLog(); delete $("#clearLog").dataset.c; $("#clearLog").textContent = "Borrar registro"; } else { $("#clearLog").dataset.c = 1; $("#clearLog").textContent = "¿Seguro? Pulsa otra vez"; } };
+
+renderWords();
+</script>
+</body>
+</html>
