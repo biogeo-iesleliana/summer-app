@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APP SUMMER · Prototipo 0.5</title>
+<title>APP SUMMER · Prototipo 0.5.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -66,7 +66,7 @@
 </head>
 <body>
 <header>
-  <h1>APP SUMMER <span class="muted">prototipo 0.5</span></h1>
+  <h1>APP SUMMER <span class="muted">prototipo 0.5.1</span></h1>
   <button data-v="vocab" class="on">1 · Vocabulario</button>
   <button data-v="ajustes">2 · Ajustes</button>
   <button data-v="sesion">3 · Sesión</button>
@@ -98,7 +98,7 @@
         <button class="b" id="addBlock">Añadir bloque</button>
         <label>Ver: <select id="viewBlock"></select></label>
       </div>
-      <p class="muted">Toca los bloques que aparecen debajo de cada palabra para incluirla o quitarla. Una palabra puede estar en varios bloques. Si estás viendo un bloque, las palabras nuevas se añaden a ese bloque.</p>
+      <p class="muted"><b>1.</b> Escribe el nombre del bloque y pulsa «Añadir bloque». <b>2.</b> Debajo de cada palabra aparece la línea «Bloques de…»: toca <b>＋ nombre</b> para meterla en ese bloque (cambia a <b>✓</b>); vuelve a tocar para sacarla. Una palabra puede estar en varios bloques. Si estás viendo un bloque con «Ver», las palabras nuevas entran directamente en él.</p>
     </div>
     <div class="row">
       <input id="newWord" placeholder="p. ej. raíz" autocomplete="off">
@@ -332,13 +332,16 @@ function renderWords(){
     d.appendChild(c);
     // bloques temáticos de esta palabra (una palabra puede estar en varios)
     w.bloques ||= [];
-    if (S.bloques.length){
+    {
       const bl = document.createElement("div"); bl.className = "row chips";
-      bl.innerHTML = `<span class="muted">Bloques:</span>`;
+      bl.innerHTML = `<b style="font-size:.95rem">Bloques de «${w.texto}»:</b>`;
+      if (!S.bloques.length) bl.innerHTML += ` <span class="muted">todavía no hay bloques. Créalos en el recuadro «Bloques temáticos» de arriba.</span>`;
       S.bloques.forEach(name => {
-        const ch = document.createElement("button"); ch.className = "chip" + (w.bloques.includes(name) ? " on" : "");
-        ch.textContent = name;
-        ch.onclick = () => { w.bloques = w.bloques.includes(name) ? w.bloques.filter(x => x !== name) : [...w.bloques, name]; save(); renderWords(); };
+        const inside = w.bloques.includes(name);
+        const ch = document.createElement("button"); ch.className = "chip" + (inside ? " on" : "");
+        ch.textContent = (inside ? "✓ " : "＋ ") + name;
+        ch.title = inside ? "Quitar de este bloque" : "Añadir a este bloque";
+        ch.onclick = () => { w.bloques = inside ? w.bloques.filter(x => x !== name) : [...w.bloques, name]; save(); renderAll(); };
         bl.appendChild(ch);
       });
       d.appendChild(bl);
