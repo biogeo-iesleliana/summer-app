@@ -19,6 +19,8 @@
   .row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin:.5rem 0}
   input,select,button.b{font:inherit;padding:.55rem .8rem;border:1px solid var(--line);border-radius:10px;background:#fff}
   button.b{cursor:pointer}button.p{background:var(--acc);color:#fff;border-color:var(--acc)}
+  a.b,label.b{display:inline-block;font:inherit;padding:.55rem .8rem;border:1px solid var(--line);border-radius:10px;background:#fff;color:inherit;cursor:pointer;text-decoration:none}
+  a.b.p,label.b.p{background:var(--acc);color:#fff;border-color:var(--acc)}
   .word{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:.7rem;margin:.6rem 0}
   .word h3{margin:0 0 .4rem;font-size:1.2rem;display:flex;justify-content:space-between;align-items:center}
   .cands{display:flex;gap:.6rem;flex-wrap:wrap}
@@ -66,7 +68,7 @@
 </head>
 <body>
 <header>
-  <h1>APP SUMMER <span class="muted">prototipo 0.8</span></h1>
+  <h1>APP SUMMER <span class="muted">prototipo 0.8.1</span></h1>
   <button data-v="vocab" class="on">1 · Vocabulario</button>
   <button data-v="ajustes">2 · Ajustes</button>
   <button data-v="sesion">3 · Sesión</button>
@@ -88,13 +90,19 @@
         <button class="b p" id="ghSave">☁️ Guardar en GitHub</button>
         <span class="muted" id="unitMsg"></span>
       </div>
+      <div class="row" style="background:#fff;border:1px dashed #9db7e8;border-radius:12px;padding:.5rem .7rem">
+        <b>Hoja de cálculo:</b>
+        <a class="b p" href="plantillas/plantilla-asignatura.xlsx" download="plantilla-asignatura.xlsx" style="text-decoration:none">⬇️ Descargar plantilla</a>
+        <label class="b" style="cursor:pointer">📊 Importar hoja rellena<input type="file" accept=".xlsx,.csv,text/csv" hidden id="openSheet"></label>
+        <span class="muted">Para docentes sin GitHub: rellenan la plantilla (Excel o Google Sheets) y te la envían.</span>
+      </div>
       <div class="row">
         <select id="repoUnits"><option value="">Asignaturas guardadas en GitHub…</option></select>
         <button class="b" id="loadRepo">Traer a este dispositivo</button>
         <button class="b" id="refreshRepo" title="Actualizar la lista">↻</button>
       </div>
       <details>
-        <summary class="muted" style="cursor:pointer">Más opciones (clave de GitHub, copia en archivo)</summary>
+        <summary class="muted" style="cursor:pointer">Más opciones (clave de GitHub, copia de seguridad en archivo)</summary>
         <div class="row">
           <span id="ghStatus" class="muted"></span>
           <input id="ghToken" type="password" placeholder="Pega aquí la clave de GitHub (github_pat_…)" autocomplete="off" style="flex:1;min-width:260px">
@@ -104,11 +112,6 @@
         <div class="row">
           <button class="b" id="saveUnit">💾 Guardar copia en archivo</button>
           <label class="b" style="cursor:pointer">📂 Abrir archivo<input type="file" accept=".json,application/json" hidden id="openUnit"></label>
-        </div>
-        <div class="row">
-          <label class="b" style="cursor:pointer">📊 Importar hoja de cálculo<input type="file" accept=".xlsx,.csv,text/csv" hidden id="openSheet"></label>
-          <a class="b" href="plantillas/plantilla-asignatura.xlsx" download style="text-decoration:none;color:inherit">⬇️ Descargar plantilla</a>
-          <span class="muted">Otros docentes rellenan la plantilla (Excel o Google Sheets) y te la envían; al importarla se crea su asignatura.</span>
         </div>
       </details>
       <p class="muted">Cada asignatura (palabras, pictogramas, fotos y bloques) se guarda en la carpeta <b>unidades</b> del repositorio y se puede traer a cualquier dispositivo. En un mismo dispositivo puede haber varias asignaturas: cambia de una a otra con el desplegable. El registro de la alumna <b>no</b> se sube: se queda solo en este dispositivo. El repositorio es público: no subas fotos de personas.</p>
