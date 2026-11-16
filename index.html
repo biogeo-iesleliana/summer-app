@@ -3,7 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APP SUMMER · Prototipo 0.9</title>
+<title>APP SUMMER · Prototipo 0.10</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f6feb">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -35,7 +39,7 @@
   .acts input{margin-top:.3rem;transform:scale(1.3)}
   .acts small{display:block;color:var(--muted)}
   /* ---- pantalla de la alumna ---- */
-  #stage{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;z-index:10}
+  #stage{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;z-index:10;touch-action:none;overscroll-behavior:none;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
   #stage.on{display:flex}
   #stage.mouse .opt:hover{border-color:var(--acc);box-shadow:0 0 0 6px #cfe0ff}
   .opt{position:relative;overflow:hidden}
@@ -61,7 +65,31 @@
   .opt.blink{animation:blink 1s infinite}
   @keyframes blink{50%{background:#fff4c2}}
   .opt.hidden{visibility:hidden}
-  #edubar{display:flex;gap:.6rem;justify-content:space-between;padding:.5rem 1rem;background:#f1f1ea;border-top:1px solid var(--line)}
+  .opt.pressed{border-color:var(--acc)}
+  /* minúsculas, barra de la educadora arriba y zona útil de las opciones */
+  #stage.lower #prompt{text-transform:none}
+  #stage.lower #prompt.word,#stage.lower .opt span{text-transform:lowercase}
+  #stage.bar-top #edubar{order:-1;border-top:0;border-bottom:1px solid var(--line)}
+  #stage.z-bottom #grid{flex:0 0 52%;margin-top:auto}
+  #stage.z-top #grid{flex:0 0 52%;margin-bottom:auto}
+  #stage.z-left #grid{width:58%;align-self:flex-start}
+  #stage.z-right #grid{width:58%;align-self:flex-end}
+  .over{position:absolute;inset:0;background:rgba(255,255,255,.97);display:flex;align-items:center;justify-content:center;z-index:5}
+  .box{max-width:640px;width:90%;text-align:center;display:grid;gap:.8rem;justify-items:center}
+  .box textarea{font:inherit;width:100%;padding:.6rem;border:1px solid var(--line);border-radius:10px;user-select:text;-webkit-user-select:text}
+  button.big{font-size:1.3rem;padding:1rem 2rem}
+  #endState button.on{background:#e3f1e6;border-color:#7cc08e}
+  .warn{color:#6b3a00;background:#fff4d6;border:1px solid #e8c56a;border-radius:10px;padding:.5rem .7rem;font-size:.95rem}
+  #ajustes h3{margin:1.4rem 0 .2rem;border-top:1px solid var(--line);padding-top:1rem}
+  /* asistente de ajuste */
+  #wiz{position:fixed;inset:0;z-index:20;background:#fff;display:flex;flex-direction:column;user-select:none;-webkit-user-select:none}
+  #wizBar{display:flex;justify-content:space-between;align-items:center;gap:.6rem;padding:.4rem 1rem;background:#f1f1ea;border-bottom:1px solid var(--line)}
+  #wizArea{flex:1;position:relative;touch-action:none;overflow:hidden}
+  #wizTarget{position:absolute;transform:translate(-50%,-50%);width:36vmin;height:36vmin;font-size:20vmin;line-height:1;border-radius:50%;border:8px solid var(--scan);background:#fff8dc;padding:0;transition:transform .25s}
+  #wizTarget.hit{transform:translate(-50%,-50%) scale(1.25);background:#d9f5df;border-color:var(--ok)}
+  #wizResult{position:absolute;inset:0;overflow:auto;padding:1.2rem 1.5rem;background:#fff;touch-action:pan-y}
+  #wizResult table{max-width:620px}
+  #edubar{display:flex;gap:.4rem;justify-content:space-between;padding:.4rem .8rem;background:#f1f1ea;border-top:1px solid var(--line);flex-wrap:wrap}
   #edubar button{font:inherit;font-size:.95rem;padding:.5rem .8rem;border-radius:10px;border:1px solid var(--line);background:#fff}
   #edubar button.on{background:#fff0c2;border-color:#d4a800}
   #reward{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(255,255,255,.92);font-size:30vmin}
@@ -78,7 +106,7 @@
 </head>
 <body>
 <header>
-  <h1>APP SUMMER <span class="muted">prototipo 0.9</span></h1>
+  <h1>APP SUMMER <span class="muted">prototipo 0.10</span></h1>
   <button data-v="vocab" class="on">1 · Vocabulario</button>
   <button data-v="ajustes">2 · Ajustes</button>
   <button data-v="sesion">3 · Sesión</button>
@@ -147,28 +175,81 @@
 
   <!-- AJUSTES -->
   <section id="ajustes" class="view">
+    <div class="word" style="background:#f3f7ff">
+      <div class="row"><button class="b p" id="wizStart">🧭 Asistente de ajuste (2 minutos)</button> <span class="muted" id="wizMsg"></span></div>
+      <p class="muted">Un juego corto de «toca la estrella» (con pulsador: «pulsa cuando salga la estrella») que mide cómo responde la alumna y propone los ajustes de partida. Elige antes la forma de responder. Conviene hacerlo el primer día y repetirlo si cambian la postura o el dispositivo.</p>
+    </div>
+
+    <h3>Cómo responde</h3>
     <label class="f">Forma de responder de la alumna
       <select id="sMode"><option value="touch">Tocar la pantalla (tablet)</option><option value="scan">Pulsador con barrido (portátil)</option><option value="mouse">Ratón (ordenador; también ratón de cabeza)</option></select>
     </label>
+    <label class="f onlyTouch">Al tocar la pantalla, la respuesta cuenta…
+      <select id="sTap"><option value="up">Al levantar la mano (dentro de la misma opción)</option><option value="down">Nada más tocar</option><option value="hold">Al mantener el toque un momento</option></select>
+    </label>
+    <label class="f" id="holdRow">Tiempo que debe mantener el toque (segundos)
+      <input id="sHold" type="number" min="0.2" max="3" step="0.1">
+    </label>
+    <p class="muted onlyTouch">Solo cuenta el primer contacto: si apoya la palma o toca con varios dedos, los demás se ignoran. Si arrastra la mano y la levanta en otra opción, no cuenta. «Nada más tocar» va bien si le cuesta retirar la mano; «al mantener» evita que cuenten los roces.</p>
     <label class="f" id="dwellRow">Con ratón: elegir dejando el puntero quieto encima durante (segundos; 0 = solo con clic)
       <input id="sDwell" type="number" min="0" max="5" step="0.25">
     </label>
     <label class="f">Número de opciones por pregunta
       <select id="sN"><option>2</option><option>3</option><option>4</option></select>
     </label>
-    <label class="f">Tiempo de barrido por opción (segundos)
+    <label class="f onlyScan">Tiempo de barrido por opción (segundos)
       <input id="sScan" type="number" min="1" max="8" step="0.5">
     </label>
-    <label class="f">Vueltas de barrido antes de dar ayuda
+    <label class="f onlyScan">Vueltas de barrido antes de repetir la pregunta
       <input id="sLaps" type="number" min="1" max="5" step="1">
     </label>
     <label class="f">Ignorar toques o pulsaciones repetidas durante (segundos)
       <input id="sDeb" type="number" min="0" max="3" step="0.1">
     </label>
+    <p class="muted onlyScan">Con pulsador: el pulsador debe enviar la tecla <b>Espacio</b> o <b>Intro</b>. Para probar sin pulsador, usa la barra espaciadora.</p>
+
+    <h3>Cómo se ve</h3>
+    <label class="f">Palabras escritas en
+      <select id="sCase"><option value="upper">MAYÚSCULAS</option><option value="lower">minúsculas</option></select>
+    </label>
+    <label class="f">Zona de la pantalla donde aparecen las opciones
+      <select id="sZone"><option value="full">Toda la pantalla</option><option value="bottom">Solo la mitad de abajo</option><option value="top">Solo la mitad de arriba</option><option value="left">Solo el lado izquierdo</option><option value="right">Solo el lado derecho</option></select>
+    </label>
+    <label class="f">Colocación de las opciones
+      <select id="sLayout"><option value="auto">Automática (cuadrícula)</option><option value="row">En fila (una al lado de otra)</option><option value="col">En columna (una encima de otra)</option></select>
+    </label>
+    <label class="f">Barra de botones de la educadora
+      <select id="sBar"><option value="top">Arriba (lejos de la mano de la alumna)</option><option value="bottom">Abajo</option></select>
+    </label>
+
+    <h3>Voz</h3>
     <label class="f">Velocidad de la voz
       <input id="sRate" type="number" min="0.5" max="1.3" step="0.05">
     </label>
-    <p class="muted">Con pulsador: el pulsador debe enviar la tecla <b>Espacio</b> o <b>Intro</b>. Para probar sin pulsador, usa la barra espaciadora. Con ratón: se elige con clic; si activas la permanencia, basta con dejar el puntero quieto encima (útil con ratón de cabeza, por ejemplo Enable Viacam).</p>
+    <div class="row"><button class="b" id="voiceTest">🔊 Probar la voz</button> <span class="muted" id="voiceMsg"></span></div>
+
+    <h3>Duración de la sesión</h3>
+    <label class="f">Tiempo máximo (minutos; 0 = sin límite). Al cumplirse, la sesión termina con normalidad después de la pregunta en curso.
+      <input id="sMaxMin" type="number" min="0" max="60" step="1">
+    </label>
+    <label class="f">Número máximo de palabras por sesión (0 = todas las del bloque)
+      <input id="sMaxItems" type="number" min="0" max="40" step="1">
+    </label>
+
+    <h3>Refuerzo al acertar</h3>
+    <label class="f">Tipo de refuerzo
+      <select id="sReward"></select>
+    </label>
+    <label class="f">Duración del refuerzo cuando acierta sola (segundos)
+      <input id="sRewardSec" type="number" min="1" max="20" step="1">
+    </label>
+    <div id="musicBox" class="word">
+      <div class="row"><b>Canciones</b> <label class="b" style="cursor:pointer">＋ Añadir canción<input type="file" accept="audio/*" multiple hidden id="musicAdd"></label> <button class="b" id="rewardTest">▶ Probar</button></div>
+      <div class="row chips" id="musicList"></div>
+      <p class="muted" id="musicMsg"></p>
+      <p class="muted">Añade canciones que le gusten (archivos mp3 o similares del dispositivo). Cada acierto hace sonar unos segundos y la canción continúa donde se quedó. Las canciones se guardan solo en este dispositivo y no se suben a GitHub.</p>
+    </div>
+    <p class="muted">El refuerzo completo es para cuando acierta sola; si ha necesitado ayuda, el refuerzo es breve. Al terminar la sesión suena el doble de tiempo.</p>
   </section>
 
   <!-- SESIÓN -->
@@ -189,7 +270,8 @@
       <label><input type="radio" name="act" value="nombre"><span><b>5 · ¿Cómo se llama?</b><small>Ve el pictograma y elige su palabra escrita. En barrido no se leen las opciones en voz alta.</small></span></label>
       <label><input type="radio" name="act" value="repaso"><span><b>6 · Repaso mezclado</b><small>Mezcla las actividades 2–5 con las palabras ya trabajadas.</small></span></label>
     </div>
-    <p class="muted">La sesión usa las palabras que tienen pictograma elegido. La barra inferior es para la educadora.</p>
+    <p class="muted">La sesión usa las palabras que tienen pictograma elegido. La barra de botones es para la educadora.</p>
+    <p id="offMsg" class="muted"></p>
     <button class="b p" id="start" style="font-size:1.3rem;padding:1rem 2rem">▶ Empezar sesión</button>
   </section>
 
@@ -201,7 +283,18 @@
     <div id="regTable"></div>
     <div class="row">
       <button class="b" id="csv">Descargar registro (CSV)</button>
+      <button class="b" id="csvSes">Descargar sesiones (CSV)</button>
       <button class="b" id="clearLog">Borrar registro</button>
+    </div>
+    <div class="word" style="background:#f3f7ff">
+      <div class="row"><b>Copia de seguridad</b>
+        <button class="b p" id="backup">💾 Guardar copia completa</button>
+        <label class="b" style="cursor:pointer">📂 Recuperar una copia<input type="file" accept=".json,application/json" hidden id="restore"></label>
+        <button class="b" id="restoreOk" hidden>Sí, recuperar esta copia</button>
+      </div>
+      <p id="backupWarn" class="muted"></p>
+      <p id="restoreMsg" class="muted"></p>
+      <p class="muted">La copia es un archivo con el vocabulario, los ajustes y el registro de este dispositivo. Guárdala en un lugar seguro del centro: contiene datos de la alumna. No incluye las canciones ni la clave de GitHub.</p>
     </div>
   </section>
 
@@ -214,7 +307,7 @@
       <ol>
         <li>En <b>1 · Vocabulario</b>, elige tu asignatura en el desplegable o pulsa <b>＋ Nueva asignatura</b> y escribe su nombre.</li>
         <li>Escribe una palabra y pulsa <b>Buscar y añadir</b>. La app propone 3 pictogramas de ARASAAC: toca el más adecuado (queda marcado en verde).</li>
-        <li>En <b>2 · Ajustes</b>, elige cómo responderá la alumna.</li>
+        <li>En <b>2 · Ajustes</b>, elige cómo responderá la alumna y, el primer día, pasa con ella el <b>🧭 Asistente de ajuste</b> (2 minutos).</li>
         <li>En <b>3 · Sesión</b>, elige asignatura, bloque y actividad y pulsa <b>▶ Empezar sesión</b>.</li>
       </ol>
     </details>
@@ -241,11 +334,13 @@
     <details><summary>4. Formas de responder de la alumna</summary>
       <table>
         <tr><th>Forma</th><th>Cómo funciona</th><th>Para qué</th></tr>
-        <tr><td>Tocar la pantalla</td><td>Toca la opción. Se ignoran los toques repetidos y los que hace mientras habla la app.</td><td>Tablet</td></tr>
+        <tr><td>Tocar la pantalla</td><td>Toca la opción con el dedo o con la palma. Solo cuenta el primer contacto; se ignoran los toques repetidos, los arrastres que acaban en otra opción y los que hace mientras habla la app. Se puede elegir que la respuesta cuente al tocar, al levantar la mano o al mantener el toque.</td><td>Tablet</td></tr>
         <tr><td>Pulsador con barrido</td><td>La app resalta y nombra cada opción; pulsa cuando llega la correcta. El pulsador debe enviar Espacio o Intro.</td><td>Portátil con pulsador</td></tr>
         <tr><td>Ratón</td><td>Clic en la opción. Opcional: elegir dejando el puntero quieto encima (barra azul de progreso).</td><td>Ordenador, ratón de cabeza y <b>probar la app</b></td></tr>
       </table>
       <p>En <b>Ajustes</b> se regulan el número de opciones (2–4), la velocidad del barrido y de la voz, y el tiempo para ignorar toques repetidos. Empieza con <b>2 opciones</b> y barrido lento (3 s).</p>
+      <p><b>🧭 Asistente de ajuste</b>: un juego de «toca la estrella» que mide a qué zonas de la pantalla llega, cuánto mantiene el toque y si hay toques repetidos (con pulsador, cuánto tarda en pulsar), y propone los ajustes. Tú decides si aplicarlos.</p>
+      <p><b>Cómo se ve</b>: palabras en MAYÚSCULAS o minúsculas; opciones en toda la pantalla o solo en la zona a la que llega (abajo, arriba, izquierda o derecha); en cuadrícula, en fila o en columna.</p>
     </details>
 
     <details><summary>5. Las actividades</summary>
@@ -259,30 +354,47 @@
         <tr><td>5 · ¿Cómo se llama?</td><td>Ve la imagen y elige la palabra escrita.</td><td>Lectura global (más difícil).</td></tr>
         <tr><td>6 · Repaso mezclado</td><td>Mezcla las anteriores con palabras ya trabajadas.</td><td>Repaso y mantenimiento.</td></tr>
       </table>
-      <p><b>Ayudas automáticas</b> cuando falla: 1.º se repite la pregunta; 2.º la opción correcta parpadea; 3.º solo queda la correcta (siempre termina acertando).</p>
+      <p><b>Ayudas automáticas</b> cuando falla: 1.º se repite la pregunta; 2.º la opción correcta parpadea; 3.º solo queda la correcta (siempre termina acertando). Con pulsador, si no responde, la primera vez solo se repite la pregunta.</p>
+      <p><b>Refuerzo</b>: al acertar sola suena música unos segundos (melodías de la app o canciones que añadas en Ajustes; la canción continúa donde se quedó). Si ha necesitado ayuda, el refuerzo es breve.</p>
     </details>
 
     <details><summary>6. Durante la sesión (educadora)</summary>
       <ul>
-        <li>La sesión se abre a pantalla completa. Abajo está la barra de la educadora: <b>🔊 Repetir</b>, <b>🤝 Respuesta con mi ayuda</b> (márcalo antes de que responda si la has guiado), <b>⏭ Saltar</b> y <b>■ Terminar</b>.</li>
-        <li>Sesiones cortas (10–15 minutos). Si se cansa, termina: lo hecho queda registrado.</li>
+        <li>La sesión se abre a pantalla completa y la pantalla no se apaga. La barra de botones es para la educadora (arriba o abajo, según Ajustes):</li>
+        <li><b>🔊 Repetir</b> la pregunta. <b>🤝 Con mi ayuda</b>: márcalo antes de que responda si la has guiado.</li>
+        <li><b>✋ No cuenta</b>: si ha fallado por tocar sin querer o por no llegar (fallo de acceso, no de vocabulario), anula ese fallo y repite la pregunta. Si lo pulsas sin que haya respondido, la pregunta se anota como «no ha podido» y se pasa a la siguiente.</li>
+        <li><b>⏸ Pausa</b> para recolocar la postura o descansar; el tiempo de pausa no cuenta. <b>⏭ Saltar</b> pasa a la siguiente palabra. <b>■ Terminar</b> pide confirmación (dos toques).</li>
+        <li>La sesión termina sola al acabar las palabras o al cumplirse el tiempo máximo (12 minutos, ajustable). Al final, anota <b>cómo ha estado</b> (bien, cansada, incómoda) y, si quieres, una nota.</li>
         <li>Coloca la tablet o el pulsador donde llegue con comodidad y comprueba el acceso con la actividad 0.</li>
       </ul>
     </details>
 
-    <details><summary>7. Registro y seguimiento</summary>
+    <details><summary>7. Registro, seguimiento y copia de seguridad</summary>
       <ul>
-        <li>En <b>4 · Registro</b> se ve, por asignatura, cada palabra con sus aciertos sola, con ayuda, errores y porcentaje de aciertos sola.</li>
-        <li><b>Descargar registro (CSV)</b> lo abre en Excel para la evaluación o la ACIS.</li>
+        <li>En <b>4 · Registro</b> cada pregunta cuenta una vez. Por palabra se ve cuántas veces acertó <b>sola</b>, cuántas <b>con ayuda</b>, cuántas <b>no ha podido</b>, el porcentaje de aciertos sola, el tiempo medio de respuesta y con qué palabra la confunde.</li>
+        <li>Debajo aparece el porcentaje de aciertos según la <b>posición</b> de la respuesta correcta: si una posición sale mucho peor, el problema puede ser de acceso (no llega, el barrido va rápido) y no de vocabulario.</li>
+        <li><b>Últimas sesiones</b>: duración, aciertos, cómo terminó y las notas de la educadora.</li>
+        <li><b>Descargar registro (CSV)</b> y <b>Descargar sesiones (CSV)</b> se abren directamente en Excel.</li>
         <li>Orientación: cuando una palabra tiene un 80 % o más de aciertos sola en dos sesiones, pasa a una actividad más difícil o a más opciones.</li>
-        <li>El registro <b>se queda solo en el dispositivo</b>: nunca se sube a GitHub.</li>
+        <li>El registro <b>se queda solo en el dispositivo</b>: nunca se sube a GitHub. Por eso conviene pulsar <b>💾 Guardar copia completa</b> cada una o dos semanas (la app avisa) y guardar el archivo en un lugar seguro del centro. Con <b>📂 Recuperar una copia</b> se restaura todo en este u otro dispositivo.</li>
       </ul>
     </details>
 
-    <details><summary>8. Problemas frecuentes</summary>
+    <details><summary>8. Instalar la app y usarla sin conexión</summary>
+      <ul>
+        <li>La primera vez hace falta internet. Después, la app se abre y funciona <b>sin conexión</b>: en <b>3 · Sesión</b> aparece «✓ Lista para usar sin conexión» cuando los pictogramas están guardados en el dispositivo.</li>
+        <li><b>Instalar</b> (recomendado en la tablet): en Chrome, menú ⋮ → <b>Añadir a pantalla de inicio</b> o <b>Instalar aplicación</b>. Se abre a pantalla completa, como una app.</li>
+        <li>Sigue haciendo falta internet para buscar pictogramas nuevos y para guardar o traer asignaturas de GitHub.</li>
+        <li>Para evitar que salga de la app sin querer, en Android se puede usar además <b>Fijar aplicación</b> (Ajustes → Seguridad).</li>
+      </ul>
+    </details>
+
+    <details><summary>9. Problemas frecuentes</summary>
       <ul>
         <li><b>No aparecen pictogramas</b>: hace falta internet para buscarlos en ARASAAC.</li>
-        <li><b>No se oye la voz</b>: sube el volumen; en Android, comprueba en Ajustes → Accesibilidad → Salida de texto a voz que hay una voz en español.</li>
+        <li><b>No se oye la voz</b>: sube el volumen y pulsa «Probar la voz» en Ajustes; en Android, comprueba en Ajustes → Accesibilidad → Salida de texto a voz que hay una voz en español.</li>
+        <li><b>Responde sin querer o no le coge los toques</b>: repite el Asistente de ajuste o cambia en Ajustes cuándo cuenta la respuesta (al tocar, al levantar, al mantener) y la zona de las opciones.</li>
+        <li><b>No suena la música</b>: sube el volumen multimedia de la tablet; si una canción no se reproduce, suena una melodía de la app.</li>
         <li><b>El pulsador no responde</b>: debe enviar Espacio o Intro; prueba con la barra espaciadora del teclado.</li>
         <li><b>No veo los últimos cambios</b>: recarga la página (la versión aparece arriba, junto al título).</li>
         <li><b>«GitHub no acepta la clave»</b>: la clave ha caducado o no tiene permiso Contents: Read and write.</li>
@@ -298,11 +410,37 @@
   <div id="grid"></div>
   <div id="edubar">
     <button id="eRepeat">🔊 Repetir</button>
-    <button id="eHelp">🤝 Respuesta con mi ayuda</button>
+    <button id="eHelp">🤝 Con mi ayuda</button>
+    <button id="eVoid">✋ No cuenta</button>
+    <button id="ePause">⏸ Pausa</button>
     <button id="eSkip">⏭ Saltar</button>
     <button id="eEnd">■ Terminar</button>
   </div>
   <div id="reward">⭐</div>
+  <div id="pause" class="over" hidden><div class="box"><div style="font-size:5rem">⏸</div><button class="b p big" id="eResume">▶ Seguir</button></div></div>
+  <div id="endbox" class="over" hidden><div class="box">
+    <h2 style="margin:0">Sesión terminada</h2>
+    <p id="endSummary" style="margin:0"></p>
+    <b>¿Cómo ha estado?</b>
+    <div class="row" id="endState"><button class="b" data-s="bien">🙂 Bien</button><button class="b" data-s="cansada">😴 Cansada</button><button class="b" data-s="incómoda">😣 Incómoda</button></div>
+    <textarea id="endNote" rows="3" placeholder="Nota (opcional): postura, motivación, incidencias…"></textarea>
+    <button class="b p big" id="endSave">Guardar y salir</button>
+  </div></div>
+</div>
+
+<div id="wiz" hidden>
+  <div id="wizBar"><span><b>Asistente de ajuste</b> · <span id="wizCount"></span></span><span><button class="b" id="wizSkip">⏭ Saltar esta</button> <button class="b" id="wizClose">✕ Salir</button></span></div>
+  <div id="wizArea">
+    <button id="wizTarget" hidden>⭐</button>
+    <div id="wizResult" hidden>
+      <h2>Resultado del asistente</h2>
+      <table id="wizMed"></table>
+      <p><b>Ajustes propuestos</b></p>
+      <ul id="wizWhy"></ul>
+      <div class="row"><button class="b p big" id="wizApply">Aplicar estos ajustes</button> <button class="b" id="wizKeep">Dejar como estaba</button></div>
+      <p class="muted">Es una propuesta de partida a partir de unos pocos toques: obsérvala en las primeras sesiones y retoca los ajustes a mano si hace falta.</p>
+    </div>
+  </div>
 </div>
 
 <footer>
@@ -314,7 +452,8 @@
 const KEY = "appsummer.v0";
 const DEFAULT = {
   words: ["planta","raíz","hoja","flor","semilla","agua","sol"].map(t => ({texto:t, pictoId:null, cands:[]})),
-  settings: {mode:"touch", n:2, scan:3, laps:2, deb:0.8, rate:0.9, dwell:0},
+  settings: {mode:"touch", n:2, scan:3, laps:2, deb:0.8, rate:0.9, dwell:0,
+             tap:"up", hold:0.6, caseMode:"upper", zone:"full", layout:"auto", bar:"top", maxMin:12, maxItems:0, reward:"music", rewardSec:5},
   log: []
 };
 /* Todo se guarda en IndexedDB (mucho más espacio que localStorage, necesario para varias asignaturas con fotos) */
@@ -330,7 +469,9 @@ try { await DB.open(); raw = await DB.get("state"); } catch(e){ DB.db = null; }
 if (!raw) { try { raw = localStorage.getItem(KEY); } catch(e){} }   // datos de versiones anteriores
 try { S = raw ? JSON.parse(raw) : structuredClone(DEFAULT); } catch(e){ S = structuredClone(DEFAULT); }
 S.settings = Object.assign({}, DEFAULT.settings, S.settings);
-S.log ||= [];
+S.log ||= []; S.sesiones ||= [];
+let musicList = [];   // canciones para el refuerzo: [{name, blob}], solo en este dispositivo
+try { if (DB.db) musicList = (await DB.get("music")) || []; } catch(e){}
 // varias asignaturas: S.asignaturas = { id: {nombre, words, bloques} }, S.actual = id de la asignatura abierta
 const newId = () => "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 if (!S.asignaturas){
@@ -358,11 +499,24 @@ async function saveNow(){
 }
 
 const $ = s => document.querySelector(s);
-const pic = id => `https://static.arasaac.org/pictograms/${id}/${id}_500.png`;
+const pic = id => { id = parseInt(id, 10) || 0; return `https://static.arasaac.org/pictograms/${id}/${id}_500.png`; };
+/* todo texto que llega de fuera (archivos, hojas, GitHub) se limpia al entrar y se escapa al mostrarlo */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const cleanText = s => String(s ?? "").replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 80);
+const cleanId = v => { const n = parseInt(v, 10); return Number.isInteger(n) && n > 0 ? n : null; };
+const safeFoto = f => (typeof f === "string" && /^data:image\/(png|jpe?g|webp|gif);base64,[A-Za-z0-9+\/=]+$/.test(f)) ? f : undefined;
+const cleanWord = p => {
+  const foto = safeFoto(p?.foto), out = { texto: cleanText(p?.texto), pictoId: cleanId(p?.pictoId),
+    cands: (Array.isArray(p?.cands) ? p.cands : []).map(cleanId).filter(Boolean).slice(0, 6), useFoto: !!(p?.useFoto && foto),
+    bloques: (Array.isArray(p?.bloques) ? p.bloques : []).map(cleanText).filter(Boolean) };
+  if (foto) out.foto = foto;
+  if (typeof p?.fotoUrl === "string" && /^https?:\/\//i.test(p.fotoUrl)) out.fotoUrl = p.fotoUrl;
+  return out;
+};
 const wait = ms => new Promise(r => setTimeout(r, ms));
 /* imagen que se usa en las actividades: la foto propia si está elegida; si no, el pictograma */
-const imgOf = w => (w.useFoto && w.foto) ? w.foto : pic(w.pictoId);
-const hasImg = w => !!(w.pictoId || (w.useFoto && w.foto));
+const imgOf = w => (w.useFoto && safeFoto(w.foto)) ? w.foto : pic(w.pictoId);
+const hasImg = w => !!(w.pictoId || (w.useFoto && safeFoto(w.foto)));
 
 /* ---------- optimización de imágenes ----------
    Objetivo: nítida a pantalla completa en una tablet y ≤ ~90 KB.
@@ -423,6 +577,7 @@ document.querySelectorAll("header button").forEach(b => b.onclick = () => {
   document.querySelectorAll("header button").forEach(x => x.classList.toggle("on", x === b));
   document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === b.dataset.v));
   if (b.dataset.v === "registro") renderLog();
+  if (b.dataset.v === "sesion") cachePictos();
 });
 
 /* ---------- ARASAAC ---------- */
@@ -446,7 +601,7 @@ function renderBlocks(){
   // listas desplegables (ver en vocabulario y elegir en la sesión), con el número de palabras
   for (const sel of [$("#viewBlock"), $("#sessBlock")]){
     const v = sel.value;
-    sel.innerHTML = `<option value="">Todos los bloques (${S.words.length})</option>` + S.bloques.map(b => `<option value="${b}">${b} (${count(b)})</option>`).join("");
+    sel.innerHTML = `<option value="">Todos los bloques (${S.words.length})</option>` + S.bloques.map(b => `<option value="${esc(b)}">${esc(b)} (${count(b)})</option>`).join("");
     sel.value = S.bloques.includes(v) ? v : "";
   }
   const del = $("#delBlock"); del.hidden = !$("#viewBlock").value; del.textContent = "Borrar este bloque"; delete del.dataset.c;
@@ -468,7 +623,7 @@ function renderWords(){
   S.words.forEach((w, i) => {
     if (!inBlock(w, view)) return;
     const d = document.createElement("div"); d.className = "word";
-    d.innerHTML = `<h3><span>${w.texto}</span><span>
+    d.innerHTML = `<h3><span>${esc(w.texto)}</span><span>
         <label class="b" style="display:inline-block;cursor:pointer">📷 Foto propia<input type="file" accept="image/*" hidden data-a="f"></label>
         <button class="b" data-a="u">🔗 Imagen web</button>
         <button class="b" data-a="s">Buscar otra vez</button> <button class="b" data-a="x">Quitar</button></span></h3>
@@ -478,13 +633,13 @@ function renderWords(){
     const ids = w.cands.length ? w.cands : (w.pictoId ? [w.pictoId] : []);
     ids.forEach(id => {
       const b = document.createElement("button"); b.className = "cand" + (id === w.pictoId && !w.useFoto ? " sel" : "");
-      b.innerHTML = `<img alt="${w.texto}" src="${pic(id)}" loading="lazy">`;
+      b.innerHTML = `<img alt="${esc(w.texto)}" src="${pic(id)}" loading="lazy">`;
       b.onclick = () => { w.pictoId = id; w.useFoto = false; save(); renderWords(); };
       c.appendChild(b);
     });
-    if (w.foto){
+    if (safeFoto(w.foto)){
       const b = document.createElement("button"); b.className = "cand" + (w.useFoto ? " sel" : "");
-      b.title = `Foto propia · ${kb(w.foto)} KB`; b.innerHTML = `<img alt="Foto: ${w.texto}" src="${w.foto}">`;
+      b.title = `Foto propia · ${kb(w.foto)} KB`; b.innerHTML = `<img alt="Foto: ${esc(w.texto)}" src="${esc(w.foto)}">`;
       b.onclick = () => { w.useFoto = true; save(); renderWords(); };
       c.appendChild(b);
       const size = document.createElement("span"); size.className = "muted"; size.textContent = `${kb(w.foto)} KB`;
@@ -498,7 +653,7 @@ function renderWords(){
     w.bloques ||= [];
     {
       const bl = document.createElement("div"); bl.className = "row chips";
-      bl.innerHTML = `<b style="font-size:.95rem">Bloques de «${w.texto}»:</b>`;
+      bl.innerHTML = `<b style="font-size:.95rem">Bloques de «${esc(w.texto)}»:</b>`;
       if (!S.bloques.length) bl.innerHTML += ` <span class="muted">todavía no hay bloques. Créalos en el recuadro «Bloques temáticos» de arriba.</span>`;
       // bloques en los que ya está: etiqueta verde con ✕ para sacarla
       w.bloques.forEach(name => {
@@ -511,7 +666,7 @@ function renderWords(){
       const free = S.bloques.filter(b => !w.bloques.includes(b));
       if (free.length){
         const sel = document.createElement("select");
-        sel.innerHTML = `<option value="">＋ Añadir a un bloque…</option>` + free.map(b => `<option>${b}</option>`).join("");
+        sel.innerHTML = `<option value="">＋ Añadir a un bloque…</option>` + free.map(b => `<option value="${esc(b)}">${esc(b)}</option>`).join("");
         sel.onchange = () => { if (sel.value){ w.bloques = [...w.bloques, sel.value]; save(); renderAll(); } };
         bl.appendChild(sel);
       }
@@ -536,6 +691,7 @@ function renderWords(){
     d.querySelector('[data-a="x"]').onclick = () => { S.words.splice(i,1); save(); renderWords(); };
     box.appendChild(d);
   });
+  if (typeof cachePictosSoon === "function") cachePictosSoon();
 }
 /* ---------- unidades: archivo y repositorio ---------- */
 // repositorio de donde se leen las unidades (se deduce de la dirección de GitHub Pages)
@@ -547,7 +703,7 @@ const REPO = (() => {
 const slug = s => (s || "asignatura").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "unidad";
 const msg = t => { $("#unitMsg").textContent = t; if (t) setTimeout(() => { if ($("#unitMsg").textContent === t) $("#unitMsg").textContent = ""; }, 6000); };
 
-$("#unitName").onchange = e => { S.unitName = e.target.value.trim(); save(); renderSubjects(); };
+$("#unitName").onchange = e => { S.unitName = cleanText(e.target.value); save(); renderSubjects(); };
 
 
 /* ---------- importar una asignatura desde hoja de cálculo (.xlsx o .csv) ----------
@@ -658,12 +814,12 @@ async function enrichImported(id){
 function renderSubjects(){
   const ids = Object.keys(S.asignaturas).sort((a, b) => subjName(a).localeCompare(subjName(b), "es"));
   document.querySelectorAll(".subjSel").forEach(sel => {
-    sel.innerHTML = ids.map(id => `<option value="${id}">${subjName(id)} (${S.asignaturas[id].words.length})</option>`).join("");
+    sel.innerHTML = ids.map(id => `<option value="${esc(id)}">${esc(subjName(id))} (${S.asignaturas[id].words.length})</option>`).join("");
     sel.value = S.actual;
   });
   const ls = $("#logSubj"), v = ls.value;
-  ls.innerHTML = `<option value="">Todas las asignaturas</option>` + ids.map(id => `<option value="${id}">${subjName(id)}</option>`).join("");
-  ls.value = ids.includes(v) ? v : S.actual;
+  ls.innerHTML = `<option value="">Todas las asignaturas</option>` + ids.map(id => `<option value="${esc(id)}">${esc(subjName(id))}</option>`).join("");
+  ls.value = (v === "" && ls.dataset.todas) ? "" : S.actual;   // el registro sigue a la asignatura abierta, salvo que se haya elegido «Todas»
   $("#unitName").value = S.unitName || "";
   const del = $("#subjDel"); del.textContent = "Borrar"; delete del.dataset.c; del.hidden = ids.length < 2;
 }
@@ -739,6 +895,7 @@ let pendingUnit = null;   // si ya existe una asignatura con ese nombre, se pide
 const sameName = nombre => Object.keys(S.asignaturas).find(id => subjName(id).trim().toLowerCase() === (nombre || "").trim().toLowerCase());
 function offerUnit(unit){
   if (!unit || unit.formato !== "app-summer-unidad" || !Array.isArray(unit.palabras)) { msg("Ese archivo no es una asignatura de APP SUMMER."); return; }
+  unit.nombre = cleanText(unit.nombre) || "Asignatura";
   pendingUnit = unit;
   const id = sameName(unit.nombre);
   if (!id || !S.asignaturas[id].words.length) return applyUnit();
@@ -748,10 +905,11 @@ function offerUnit(unit){
 async function applyUnit(){
   const u = pendingUnit; pendingUnit = null; $("#loadRepo").textContent = "Traer a este dispositivo";
   const id = sameName(u.nombre) || newId();
+  const words = u.palabras.map(cleanWord).filter(w => w.texto);
   S.asignaturas[id] = {
     nombre: u.nombre,
-    bloques: u.bloques || [...new Set(u.palabras.flatMap(p => p.bloques || []))],
-    words: u.palabras.map(p => ({ texto: p.texto, pictoId: p.pictoId ?? null, cands: p.cands || [], foto: p.foto, useFoto: !!p.useFoto, bloques: p.bloques || [], ...(p.fotoUrl ? { fotoUrl: p.fotoUrl } : {}) }))
+    bloques: [...new Set((Array.isArray(u.bloques) ? u.bloques.map(cleanText).filter(Boolean) : []).concat(words.flatMap(w => w.bloques)))],
+    words
   };
   S.actual = id;
   const ok = await saveNow();
@@ -771,7 +929,7 @@ async function listRepoUnits(){
     if (!r.ok) throw 0;
     const files = (await r.json()).filter(f => f.name.endsWith(".json"));
     sel.innerHTML = `<option value="">Asignaturas guardadas en GitHub (${files.length})…</option>` +
-      files.map(f => `<option value="${f.url}">${f.name.replace(/\.json$/, "")}</option>`).join("");
+      files.map(f => `<option value="${esc(f.url)}">${esc(f.name.replace(/\.json$/, ""))}</option>`).join("");
   } catch(e){ sel.innerHTML = `<option value="">Sin conexión con GitHub</option>`; }
 }
 $("#refreshRepo").onclick = listRepoUnits;
@@ -788,12 +946,13 @@ listRepoUnits();
 
 function alertIn(el, msg){ const p = document.createElement("p"); p.textContent = msg; p.style.color = "#b00"; el.appendChild(p); setTimeout(() => p.remove(), 5000); }
 $("#addWord").onclick = () => {
-  const t = $("#newWord").value.trim(); if (!t) return;
+  const t = cleanText($("#newWord").value); if (!t) return;
+  if (S.words.some(w => w.texto.toLowerCase() === t.toLowerCase())){ msg(`«${t}» ya está en esta asignatura.`); $("#newWord").select(); return; }
   const vb = $("#viewBlock").value; const w = {texto:t, pictoId:null, cands:[], bloques: vb ? [vb] : []}; S.words.push(w); $("#newWord").value = ""; propose(w);
 };
 $("#newWord").addEventListener("keydown", e => { if (e.key === "Enter") $("#addWord").click(); });
 $("#addBlock").onclick = () => {
-  const b = $("#newBlock").value.trim(); if (!b) return;
+  const b = cleanText($("#newBlock").value); if (!b) return;
   if (!S.bloques.some(x => x.toLowerCase() === b.toLowerCase())) S.bloques.push(b);
   $("#newBlock").value = ""; save(); renderAll();
 };
@@ -803,18 +962,43 @@ $("#fillAll").onclick = async () => { for (const w of S.words) if (!w.cands.leng
 
 /* ---------- ajustes ---------- */
 const bind = (sel, key, num=true) => { const el = $(sel); el.value = S.settings[key];
-  el.onchange = () => { S.settings[key] = num ? Number(el.value) : el.value; save(); }; };
-bind("#sMode","mode",false); bind("#sDwell","dwell"); bind("#sN","n");
-const showDwell = () => { $("#dwellRow").hidden = S.settings.mode !== "mouse"; };
-$("#sMode").addEventListener("change", showDwell); showDwell(); bind("#sScan","scan"); bind("#sLaps","laps"); bind("#sDeb","deb"); bind("#sRate","rate");
+  el.onchange = () => {
+    let v = num ? Number(el.value) : el.value;
+    if (num){   // los valores fuera de rango se corrigen
+      if (!Number.isFinite(v)) v = DEFAULT.settings[key];
+      if (el.min !== "" && el.min != null && v < Number(el.min)) v = Number(el.min);
+      if (el.max !== "" && el.max != null && v > Number(el.max)) v = Number(el.max);
+      el.value = v;
+    }
+    S.settings[key] = v; save(); showSettingRows();
+  }; };
+const SETTING_FIELDS = [["#sMode","mode",false],["#sDwell","dwell"],["#sN","n"],["#sScan","scan"],["#sLaps","laps"],["#sDeb","deb"],["#sRate","rate"],
+  ["#sTap","tap",false],["#sHold","hold"],["#sCase","caseMode",false],["#sZone","zone",false],["#sLayout","layout",false],["#sBar","bar",false],
+  ["#sMaxMin","maxMin"],["#sMaxItems","maxItems"],["#sReward","reward",false],["#sRewardSec","rewardSec"]];
+function showSettingRows(){
+  const m = S.settings.mode;
+  $("#dwellRow").hidden = m !== "mouse";
+  document.querySelectorAll(".onlyTouch").forEach(e => e.hidden = m !== "touch");
+  document.querySelectorAll(".onlyScan").forEach(e => e.hidden = m !== "scan");
+  $("#holdRow").hidden = m !== "touch" || S.settings.tap !== "hold";
+  $("#musicBox").hidden = S.settings.reward !== "music";
+}
+function bindSettings(){ SETTING_FIELDS.forEach(f => bind(...f)); showSettingRows(); }
 
 /* ---------- voz ---------- */
 let voice = null;
-function pickVoice(){ const v = speechSynthesis.getVoices(); voice = v.find(x => /^es[-_]ES/i.test(x.lang)) || v.find(x => /^es/i.test(x.lang)) || null; }
-if ("speechSynthesis" in window){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+const HAS_TTS = "speechSynthesis" in window;
+function pickVoice(){ const v = speechSynthesis.getVoices(); voice = v.find(x => /^es[-_]ES/i.test(x.lang)) || v.find(x => /^es/i.test(x.lang)) || null; showVoiceStatus(); }
+function showVoiceStatus(){
+  const el = $("#voiceMsg"); if (!el) return;
+  if (!HAS_TTS){ el.textContent = "⚠️ Este navegador no tiene voz. Las preguntas se mostrarán escritas; conviene usar Chrome."; return; }
+  const n = speechSynthesis.getVoices().length;
+  el.textContent = voice ? `Voz: ${voice.name}.` : n ? "⚠️ No hay ninguna voz en español instalada en este dispositivo. Instálala en Ajustes → Accesibilidad → Salida de texto a voz." : "Pulsa «Probar la voz» para comprobar que se oye bien.";
+}
+if (HAS_TTS){ pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function say(text, {volume=1} = {}){
   return new Promise(res => {
-    if (!("speechSynthesis" in window)) return res();
+    if (!HAS_TTS) return res();
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "es-ES"; if (voice) u.voice = voice; u.rate = S.settings.rate; u.volume = volume;
@@ -823,11 +1007,117 @@ function say(text, {volume=1} = {}){
     speechSynthesis.speak(u);
   });
 }
+$("#voiceTest").onclick = () => say("Hola. ¿Dónde está la planta?");
+
+/* ---------- refuerzos ----------
+   Cada refuerzo es una entrada de REWARDS con un nombre y una función play(segundos).
+   Para añadir un tipo nuevo (animación, foto, vídeo…) basta con añadir aquí otra entrada. */
+let actx = null, melGain = null, tuneIdx = 0, musicIdx = 0;
+const audioEl = new Audio();
+const SILENCE = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+/* el navegador solo deja sonar música si se ha preparado durante un toque de la persona: se hace al empezar la sesión */
+function unlockAudio(){
+  try { actx ||= new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch(e){}
+  try { if (!audioEl._name){ audioEl.src = SILENCE; audioEl.play().catch(() => {}); } } catch(e){}
+}
+const TUNES = [[0,4,7,12,7,4,0,4,7,12,16,12],[0,2,4,5,7,9,11,12,11,9,7,5],[0,7,4,7,5,9,7,12,11,7,9,12],[12,7,9,5,7,4,5,2,4,0,4,7]];
+async function melody(sec){   // melodías sencillas generadas por la app (no necesitan archivos)
+  if (!actx) return wait(sec * 1000);
+  const tune = TUNES[tuneIdx++ % TUNES.length], step = 0.22, t0 = actx.currentTime + 0.05;
+  melGain = actx.createGain(); melGain.gain.value = 0.25; melGain.connect(actx.destination);
+  for (let i = 0; i < Math.floor(sec / step); i++){
+    const o = actx.createOscillator(), g = actx.createGain(), t = t0 + i * step;
+    o.type = "triangle"; o.frequency.value = 261.63 * Math.pow(2, tune[i % tune.length] / 12);
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(1, t + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t + step * 0.95);
+    o.connect(g); g.connect(melGain); o.start(t); o.stop(t + step);
+  }
+  await wait(sec * 1000);
+}
+async function playMusic(sec){   // canciones propias: cada refuerzo continúa la canción donde se quedó
+  if (musicList.length){
+    const t = musicList[musicIdx % musicList.length];
+    try {
+      if (audioEl._name !== t.name){
+        if (audioEl._url) URL.revokeObjectURL(audioEl._url);
+        audioEl._url = URL.createObjectURL(t.blob); audioEl.src = audioEl._url; audioEl._name = t.name; audioEl._pos = 0;
+      }
+      audioEl.currentTime = audioEl._pos || 0; audioEl.volume = 1;
+      await audioEl.play();
+      await wait(Math.max(300, sec * 1000 - 400));
+      for (let v = 0.8; v >= 0; v -= 0.2){ audioEl.volume = Math.max(0, v); await wait(80); }
+      audioEl.pause(); audioEl._pos = audioEl.currentTime;
+      if (audioEl.ended || !(audioEl.duration - audioEl._pos > sec)){ audioEl._pos = 0; musicIdx++; }
+      return;
+    } catch(e){ /* si la canción no se puede reproducir, suena una melodía */ }
+  }
+  await melody(sec);
+}
+function stopMusic(){ try { audioEl.pause(); } catch(e){} try { melGain?.disconnect(); } catch(e){} melGain = null; }
+const REWARDS = {
+  music: { nombre: "Música", icon: "🎵", play: playMusic },
+  star:  { nombre: "Estrella (sin música)", icon: "⭐", play: sec => wait(Math.min(sec, 1.2) * 1000) },
+};
+/* kind: "full" (acierto sola: refuerzo completo), "short" (con ayuda: breve), "end" (fin de sesión) */
+async function showReward(kind){
+  const rw = REWARDS[S.settings.reward] || REWARDS.star, el = $("#reward");
+  const sec = kind === "short" ? 0.9 : kind === "end" ? Math.min(15, S.settings.rewardSec * 2) : S.settings.rewardSec;
+  el.textContent = kind === "short" ? "⭐" : rw.icon + "⭐"; el.classList.add("on");
+  try { if (kind === "short") await wait(sec * 1000); else await rw.play(sec); } catch(e){}
+  el.classList.remove("on");
+}
+$("#sReward").innerHTML = Object.entries(REWARDS).map(([k, r]) => `<option value="${k}">${esc(r.nombre)}</option>`).join("");
+if (!REWARDS[S.settings.reward]) S.settings.reward = "music";
+
+/* canciones propias: se guardan solo en este dispositivo */
+function renderMusic(){
+  const box = $("#musicList"); box.innerHTML = "";
+  if (!musicList.length){ box.innerHTML = `<span class="muted">Sin canciones propias: sonarán melodías de la app.</span>`; return; }
+  musicList.forEach((t, i) => {
+    const ch = document.createElement("span"); ch.className = "chip on"; ch.textContent = `🎵 ${t.name} `;
+    const x = document.createElement("button"); x.className = "chipx"; x.textContent = "✕"; x.title = "Quitar esta canción";
+    x.onclick = async () => { musicList.splice(i, 1); audioEl._name = null; try { await DB.set("music", musicList); } catch(e){} renderMusic(); };
+    ch.appendChild(x); box.appendChild(ch);
+  });
+}
+$("#musicAdd").onchange = async e => {
+  const files = [...e.target.files]; e.target.value = "";
+  for (const f of files){
+    if (!f.type.startsWith("audio/")){ $("#musicMsg").textContent = `«${f.name}» no es un archivo de sonido.`; continue; }
+    if (f.size > 15 * 1024 * 1024){ $("#musicMsg").textContent = `«${f.name}» ocupa demasiado (máximo 15 MB).`; continue; }
+    if (!musicList.some(t => t.name === f.name)) musicList.push({ name: f.name, blob: f });
+  }
+  try { if (!DB.db) throw 0; await DB.set("music", musicList); $("#musicMsg").textContent = ""; }
+  catch(err){ $("#musicMsg").textContent = "No se han podido guardar las canciones en este dispositivo: sonarán solo hasta que se cierre la app."; }
+  renderMusic();
+};
+$("#rewardTest").onclick = async () => { unlockAudio(); stopMusic(); await showReward("full"); };
+$("#reward").onclick = () => { if (!sess) { stopMusic(); $("#reward").classList.remove("on"); } };
+
+/* ---------- pantalla: completa, encendida y con la apariencia elegida ---------- */
+let wakeLock = null;
+async function keepAwake(on){
+  try { if (on) wakeLock = await navigator.wakeLock?.request("screen"); else { await wakeLock?.release(); wakeLock = null; } } catch(e){}
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") saveNow();
+  else if (sess || wiz) keepAwake(true);
+});
+window.addEventListener("pagehide", () => { saveNow(); });
+function goFull(on){
+  try { if (on) document.documentElement.requestFullscreen?.({ navigationUI: "hide" })?.catch(() => {}); else if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
+  keepAwake(on);
+}
+function styleStage(){
+  const st = $("#stage"), s = S.settings;
+  st.className = "on" + (s.mode === "mouse" ? " mouse" : "") + (s.caseMode === "lower" ? " lower" : "") + (s.bar === "top" ? " bar-top" : "") + (s.zone !== "full" ? " z-" + s.zone : "");
+}
+for (const id of ["#stage", "#wiz"]) $(id).addEventListener("contextmenu", e => e.preventDefault());
 
 /* ---------- sesión ---------- */
 const CHOICE_TYPES = ["donde","escucha","lee","nombre"];
 const isChoice = t => CHOICE_TYPES.includes(t);
 let sess = null;           // estado de la sesión en curso
+let ending = null;         // resumen de la sesión que se acaba de terminar (pantalla de fin)
 let scanTimer = null;
 let lastInput = 0, inputLockedUntil = 0, scanSince = 0;
 
@@ -845,30 +1135,64 @@ $("#start").onclick = () => {
     const prev = usable.filter(w => seen.has(w.texto));
     if (prev.length >= 2) queue = prev;
   }
-  sess = { act, pool: usable, queue: shuffle(queue), i: 0, id: Date.now(), lastCorrectPos: [] };
-  $("#stage").classList.add("on");
-  $("#stage").classList.toggle("mouse", S.settings.mode === "mouse");
-  try { document.documentElement.requestFullscreen?.().catch(() => {}); } catch(e){}
+  queue = shuffle(queue);
+  if (S.settings.maxItems > 0) queue = queue.slice(0, S.settings.maxItems);
+  sess = { act, pool: usable, queue, i: 0, id: Date.now(), t0: Date.now(), pausedMs: 0, subj: S.actual, bloque: blk, lastCorrectPos: [],
+           stats: { n: 0, sola: 0, ayuda: 0, noPudo: 0 } };
+  ending = null; $("#endbox").hidden = true; $("#pause").hidden = true; resetEndBtn();
+  unlockAudio(); styleStage(); goFull(true);
   nextItem();
 };
 function alertBox(msg){ const p = document.createElement("p"); p.textContent = msg; p.style.color = "#b00"; $("#sesion").appendChild(p); setTimeout(() => p.remove(), 4000); }
 
-function stopScan(){ clearDwell(); clearTimeout(scanTimer); scanTimer = null; document.querySelectorAll(".opt").forEach(o => o.classList.remove("scan")); }
+function stopScan(){ clearDwell(); clearPtr(); clearTimeout(scanTimer); scanTimer = null; document.querySelectorAll(".opt").forEach(o => o.classList.remove("scan")); }
+const activeMs = () => Date.now() - sess.t0 - sess.pausedMs;
 
-function endSession(){
-  stopScan(); if ("speechSynthesis" in window) speechSynthesis.cancel(); sess = null;
-  $("#stage").classList.remove("on");
-  try { if (document.fullscreenElement) document.exitFullscreen(); } catch(e){}
-  document.querySelector('header button[data-v="registro"]').click();
+/* fin de sesión: refuerzo final y pantalla de resumen para la educadora */
+async function finale(reason){
+  const s = sess; lock();
+  await say("¡Has terminado! ¡Muy bien!");
+  if (sess !== s) return;
+  await showReward("end");
+  if (sess !== s) return;
+  showEnd(reason);
 }
+function showEnd(reason){
+  if (!sess) return;
+  stopScan(); if (HAS_TTS) speechSynthesis.cancel(); stopMusic(); $("#reward").classList.remove("on"); $("#pause").hidden = true;
+  const st = sess.stats;
+  ending = { id: sess.id, fecha: new Date(sess.t0).toISOString(), asignaturaId: sess.subj, asignatura: subjName(sess.subj), bloque: sess.bloque || "",
+    actividad: ACT_ALL[sess.act] || sess.act, modo: S.settings.mode, duracionS: Math.round(activeMs() / 1000),
+    preguntas: st.n, solas: st.sola, conAyuda: st.ayuda, noPudo: st.noPudo, fin: reason, estado: "", nota: "" };
+  sess = null;
+  const min = Math.floor(ending.duracionS / 60), seg = ending.duracionS % 60;
+  $("#endSummary").textContent = (reason === "tiempo" ? "Se ha alcanzado el tiempo máximo de la sesión. " : "") +
+    `Duración: ${min} min ${seg} s. ` + (ending.preguntas ? `Preguntas: ${ending.preguntas} · sola: ${ending.solas} · con ayuda: ${ending.conAyuda}` + (ending.noPudo ? ` · no ha podido: ${ending.noPudo}` : "") + "." : "");
+  document.querySelectorAll("#endState button").forEach(b => b.classList.remove("on"));
+  $("#endNote").value = ""; $("#endbox").hidden = false;
+}
+document.querySelectorAll("#endState button").forEach(b => b.onclick = () => {
+  if (!ending) return; ending.estado = b.dataset.s;
+  document.querySelectorAll("#endState button").forEach(x => x.classList.toggle("on", x === b));
+});
+$("#endSave").onclick = () => {
+  if (ending){
+    ending.nota = $("#endNote").value.trim().slice(0, 500); (S.sesiones ||= []).push(ending);
+    const ls = $("#logSubj"); delete ls.dataset.todas; ls.value = ending.asignaturaId;   // el registro se abre en la asignatura de la sesión
+    ending = null; saveNow();
+  }
+  $("#endbox").hidden = true; $("#stage").className = ""; goFull(false);
+  document.querySelector('header button[data-v="registro"]').click();
+};
 
 function nextItem(){
   stopScan();
   if (!sess) return;
-  if (sess.i >= sess.queue.length) { lock(); say("¡Has terminado! ¡Muy bien!"); showReward(1800).then(endSession); return; }
+  if (sess.i >= sess.queue.length) { finale("completa"); return; }
+  if (sess.i > 0 && S.settings.maxMin > 0 && activeMs() > S.settings.maxMin * 60000) { finale("tiempo"); return; }
   const target = sess.queue[sess.i];
   const type = sess.act === "repaso" ? CHOICE_TYPES[Math.floor(Math.random() * CHOICE_TYPES.length)] : sess.act;
-  sess.item = { target, type, attempts: 0, help: 0, eduHelp: false };
+  sess.item = { target, type, attempts: 0, help: 0, eduHelp: false, errors: 0, noResp: 0, access: 0, lastEvent: null };
   $("#eHelp").classList.remove("on");
   const P = $("#prompt"); P.className = ""; P.innerHTML = "";
   if (type === "causa") showCause();
@@ -876,29 +1200,59 @@ function nextItem(){
   else showChoice(target, type);
 }
 
-/* toque, clic y, en modo ratón, selección por permanencia (útil con ratón de cabeza) */
+/* ---------- toque y clic ----------
+   Pensado para tocar con el dedo o con la palma: solo cuenta el primer contacto (los demás se ignoran),
+   no cuentan los toques que empiezan mientras habla la app y la forma de aceptar se elige en Ajustes:
+   "down" al tocar · "up" al levantar dentro de la misma celda · "hold" al mantener el toque. */
+let ptr = null;   // contacto en curso
+function clearPtr(){ if (ptr){ clearTimeout(ptr.timer); ptr.o.classList.remove("pressed", "dwell"); } ptr = null; }
 let dwellTimer = null;
-function clearDwell(){ clearTimeout(dwellTimer); dwellTimer = null; document.querySelectorAll(".opt.dwell").forEach(o => o.classList.remove("dwell")); }
+function clearDwell(){ clearTimeout(dwellTimer); dwellTimer = null; document.querySelectorAll(".opt.dwell").forEach(o => { if (!ptr || ptr.o !== o) o.classList.remove("dwell"); }); }
 function wireOpt(o, k){
-  o.onpointerup = () => { clearDwell(); accept(k); };
+  o.onpointerdown = e => {
+    if (!sess || sess.paused || ptr) return;                       // ptr: ya hay un contacto (palma u otro dedo)
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (Date.now() < inputLockedUntil || o.classList.contains("hidden")) return;
+    clearDwell();
+    const mouse = e.pointerType === "mouse";
+    const tap = !isChoice(sess.item.type) ? "down" : (mouse && S.settings.tap === "hold") ? "up" : S.settings.tap;
+    if (tap === "down"){ accept(k); return; }
+    ptr = { id: e.pointerId, k, o, tap }; o.classList.add("pressed");
+    if (tap === "hold"){
+      o.style.setProperty("--dwell", S.settings.hold + "s"); void o.offsetWidth; o.classList.add("dwell");
+      ptr.timer = setTimeout(() => { const p = ptr; clearPtr(); if (p) accept(p.k); }, S.settings.hold * 1000);
+    }
+  };
+  // en modo ratón: selección por permanencia (útil con ratón de cabeza)
   if (S.settings.mode !== "mouse" || !(S.settings.dwell > 0)) return;
   o.onpointerenter = () => {
     clearDwell();
-    if (Date.now() < inputLockedUntil || o.classList.contains("hidden")) return;
+    if (!sess || sess.paused || Date.now() < inputLockedUntil || o.classList.contains("hidden")) return;
     o.style.setProperty("--dwell", S.settings.dwell + "s");
     void o.offsetWidth; o.classList.add("dwell");
     dwellTimer = setTimeout(() => { clearDwell(); accept(k); }, S.settings.dwell * 1000);
   };
   o.onpointerleave = clearDwell;
 }
+const inside = (o, e) => { const el = document.elementFromPoint(e.clientX, e.clientY); return !!el && o.contains(el); };
+document.addEventListener("pointermove", e => {   // al mantener: si la mano se sale de la celda, no cuenta
+  if (ptr && e.pointerId === ptr.id && ptr.tap === "hold" && !inside(ptr.o, e)) clearPtr();
+});
+document.addEventListener("pointerup", e => {
+  if (!ptr || e.pointerId !== ptr.id) return;
+  const p = ptr; clearPtr();
+  if (p.tap === "up" && inside(p.o, e)) accept(p.k);   // un arrastre que termina en otra celda no cuenta
+});
+document.addEventListener("pointercancel", e => { if (ptr && e.pointerId === ptr.id) clearPtr(); });
+
 /* show: "both" (pictograma + palabra), "picto" (solo pictograma), "word" (solo palabra) */
 function makeOpt(w, show = "both"){
   const d = document.createElement("div"); d.className = "opt" + (show === "word" ? " wordonly" : "");
-  d.innerHTML = (show !== "word" ? `<img alt="" src="${imgOf(w)}">` : "") + (show !== "picto" ? `<span>${w.texto}</span>` : "");
+  d.innerHTML = (show !== "word" ? `<img alt="" src="${esc(imgOf(w))}">` : "") + (show !== "picto" ? `<span>${esc(w.texto)}</span>` : "");
   d.dataset.word = w.texto; return d;
 }
 function singleCell(content){
-  const g = $("#grid"); g.className = "n1"; g.innerHTML = "";
+  const g = $("#grid"); g.className = "n1"; g.style.gridTemplateColumns = ""; g.innerHTML = "";
   const o = document.createElement("div"); o.className = "opt"; o.innerHTML = content;
   wireOpt(o, 0);
   g.appendChild(o); sess.options = [o]; sess.correctIdx = 0; return o;
@@ -910,37 +1264,42 @@ function showCause(){
   unlock();
 }
 async function revealCause(){
-  const w = sess.item.target, o = sess.options[0];
-  o.innerHTML = `<img alt="" src="${imgOf(w)}"><span>${w.texto}</span>`;
+  const it = sess.item, w = it.target, o = sess.options[0];
+  o.innerHTML = `<img alt="" src="${esc(imgOf(w))}"><span>${esc(w.texto)}</span>`;
   lock(); await say(w.texto); await wait(900);
-  if (!sess) return;
+  if (!sess || sess.item !== it) return;
   sess.i++; nextItem();
 }
 
 /* 1 · Presentación */
 function showPresentation(w){
-  $("#prompt").textContent = w.texto;
-  singleCell(`<img alt="" src="${imgOf(w)}">`);
-  lock(); say(w.texto).then(() => say(w.texto)).then(unlock);
+  const it = sess.item;
+  $("#prompt").textContent = w.texto; $("#prompt").className = "word";
+  singleCell(`<img alt="" src="${esc(imgOf(w))}">`);
+  lock(); if (sess.paused) return;
+  say(w.texto).then(() => say(w.texto)).then(() => { if (sess && sess.item === it && !sess.paused) unlock(); });
 }
 
 /* 2–5 · Actividades de elección */
 function showChoice(w, type){
   const n = Math.min(S.settings.n, sess.pool.length);
-  const others = shuffle(sess.pool.filter(x => x.texto !== w.texto)).slice(0, n - 1);
+  const others = shuffle(sess.pool.filter(x => x.texto.toLowerCase() !== w.texto.toLowerCase())).slice(0, n - 1);
+  const m = others.length + 1;
   // posición de la correcta: aleatoria, sin repetir la misma más de 2 veces seguidas
-  let pos; do { pos = Math.floor(Math.random() * n); } while (n > 1 && sess.lastCorrectPos.slice(-2).filter(p => p === pos).length === 2);
+  let pos; do { pos = Math.floor(Math.random() * m); } while (m > 1 && sess.lastCorrectPos.slice(-2).filter(p => p === pos).length === 2);
   sess.lastCorrectPos.push(pos);
   const items = others.slice(); items.splice(pos, 0, w);
   const show = type === "donde" ? "both" : type === "nombre" ? "word" : "picto";
-  const g = $("#grid"); g.className = n === 3 ? "n3" : ""; g.innerHTML = "";
+  const g = $("#grid"); g.className = ""; g.innerHTML = "";
+  const lay = S.settings.layout;   // distribución: automática (2 columnas; 3 si hay 3 opciones), en fila o en columna
+  g.style.gridTemplateColumns = lay === "col" ? "1fr" : lay === "row" ? `repeat(${m},1fr)` : m === 3 ? "repeat(3,1fr)" : "repeat(2,1fr)";
   sess.options = items.map((it, k) => { const o = makeOpt(it, show); wireOpt(o, k); g.appendChild(o); return o; });
   sess.correctIdx = pos;
   const P = $("#prompt");
   if (type === "donde") P.textContent = `¿Dónde está ${w.texto}?`;
-  else if (type === "escucha") P.textContent = "🔊";
-  else if (type === "lee") { P.textContent = w.texto; P.className = "big"; }
-  else P.innerHTML = `<img alt="" src="${imgOf(w)}">`;
+  else if (type === "escucha") P.textContent = HAS_TTS ? "🔊" : `¿Dónde está ${w.texto}?`;   // sin voz en el dispositivo, la pregunta se muestra escrita
+  else if (type === "lee") { P.textContent = w.texto; P.className = "big word"; }
+  else P.innerHTML = `<img alt="" src="${esc(imgOf(w))}">`;
   ask();
 }
 
@@ -956,14 +1315,17 @@ function question(){
 
 async function ask(){
   stopScan(); lock();
+  if (!sess || sess.paused) return;
+  const it = sess.item;
   await say(question());
-  if (!sess) return;
+  if (!sess || sess.item !== it || sess.paused) return;
+  if (it.rt == null) it.tAsk = Date.now();   // el tiempo de respuesta se cuenta desde que termina la pregunta
   unlock();
   if (S.settings.mode === "scan") startScan();
 }
 
 /* bloqueo de entrada mientras habla la app (evita respuestas accidentales) */
-function lock(){ inputLockedUntil = Infinity; }
+function lock(){ inputLockedUntil = Infinity; clearPtr(); }
 function unlock(){ inputLockedUntil = Date.now() + 200; }
 
 /* ---------- barrido ---------- */
@@ -972,7 +1334,7 @@ function startScan(){
   const speakOptions = sess.item.type !== "nombre";   // en «¿Cómo se llama?» leer las opciones daría la respuesta
   let step = -1, laps = 0;
   const tick = () => {
-    if (!sess) return;
+    if (!sess || sess.paused) return;
     step++;
     if (step >= opts.length){ step = 0; laps++; }
     if (laps >= S.settings.laps){ stopScan(); noResponse(); return; }
@@ -985,8 +1347,10 @@ function startScan(){
 }
 
 document.addEventListener("keydown", e => {
-  if (!sess || !$("#stage").classList.contains("on")) return;
   if (e.key !== " " && e.key !== "Enter") return;
+  if (wiz){ e.preventDefault(); if (!e.repeat) wizKey(); return; }
+  if (!sess || sess.paused || !$("#stage").classList.contains("on")) return;
+  if (e.target.closest?.("#edubar")) return;          // los botones de la educadora se usan con normalidad
   e.preventDefault();
   if (e.repeat) return;
   if (isChoice(sess.item.type)) {
@@ -998,7 +1362,7 @@ document.addEventListener("keydown", e => {
 
 /* ---------- respuesta ---------- */
 function accept(k, fromSwitch=false){
-  if (!sess) return;
+  if (!sess || sess.paused) return;
   const now = Date.now();
   if (now < inputLockedUntil) return;
   if (now - lastInput < S.settings.deb * 1000) return;
@@ -1011,69 +1375,322 @@ function accept(k, fromSwitch=false){
   if (it.type === "causa"){ revealCause(); return; }
   if (it.type === "presenta"){ sess.i++; nextItem(); return; }
 
+  if (it.rt == null && it.tAsk) it.rt = now - it.tAsk;
   if (k === sess.correctIdx){
-    const result = (it.help > 0 || it.eduHelp) ? "con ayuda" : "sola";
-    record(it.target.texto, result, it.help);
-    lock();
-    say(`¡Muy bien! ${it.target.texto}`).then(() => showReward(900)).then(() => { if (!sess) return; sess.i++; nextItem(); });
+    it.first ??= "acierto";
+    finishItem((it.help > 0 || it.eduHelp) ? "con ayuda" : "sola");
   } else {
-    it.attempts++;
-    record(it.target.texto, "error", it.help);
+    it.first ??= "error"; it.chosen ??= sess.options[k].dataset.word;
+    it.errors++; it.attempts++; it.lastEvent = "error";
     giveHelp();
   }
 }
-function noResponse(){ const it = sess.item; it.attempts++; record(it.target.texto, "sin respuesta", it.help); giveHelp(); }
+/* sin respuesta en el barrido: la primera vez solo se repite la pregunta (puede ser despiste o cansancio, no desconocimiento);
+   si vuelve a pasar, se da la ayuda siguiente */
+function noResponse(){
+  const it = sess.item; it.first ??= "sin respuesta"; it.noResp++; it.lastEvent = "sin respuesta";
+  if (it.noResp % 2 === 1){ lock(); say("¿Seguimos?").then(() => { if (sess && sess.item === it) ask(); }); }
+  else { it.attempts++; giveHelp(); }
+}
 
 /* escalera de ayudas: 1 repetir (en lectura, se dice la palabra) · 2 la correcta parpadea · 3 solo queda la correcta */
 function giveHelp(){
   const it = sess.item; it.help = Math.min(3, it.attempts);
   if (it.help >= 2) sess.options[sess.correctIdx].classList.add("blink");
   if (it.help >= 3) sess.options.forEach((o, k) => { if (k !== sess.correctIdx) o.classList.add("hidden"); });
-  lock(); say("Vamos a probar otra vez.").then(() => { if (sess) ask(); });
+  lock(); say("Vamos a probar otra vez.").then(() => { if (sess && sess.item === it) ask(); });
 }
 
-function showReward(ms){ return new Promise(r => { const el = $("#reward"); el.classList.add("on"); setTimeout(() => { el.classList.remove("on"); r(); }, ms); }); }
+/* cierra la pregunta: una sola fila en el registro por pregunta */
+async function finishItem(resultado){
+  const it = sess.item; if (it.done) return; it.done = true;
+  record(resultado); lock();
+  if (resultado === "sola" || resultado === "con ayuda"){
+    await say(`¡Muy bien! ${it.target.texto}`);
+    if (!sess || sess.item !== it) return;
+    await showReward(resultado === "sola" ? "full" : "short");   // el refuerzo completo es para la respuesta autónoma
+    if (!sess || sess.item !== it) return;
+  }
+  sess.i++; nextItem();
+}
 
 const ACT_NAMES = {donde:"¿Dónde está?", escucha:"Escucha y elige", lee:"Lee y elige", nombre:"¿Cómo se llama?"};
-function record(palabra, resultado, ayuda){
-  S.log.push({ sesion: sess.id, fecha: new Date().toISOString(), asignaturaId: S.actual, asignatura: subjName(S.actual), palabra, actividad: ACT_NAMES[sess.item.type] || sess.item.type, opciones: sess.options.length, modo: S.settings.mode, resultado, ayuda });
+const ACT_ALL = Object.assign({causa:"Causa-efecto", presenta:"Presentación", repaso:"Repaso mezclado"}, ACT_NAMES);
+function record(resultado){
+  const it = sess.item;
+  S.log.push({ v: 2, sesion: sess.id, fecha: new Date().toISOString(), asignaturaId: sess.subj, asignatura: subjName(sess.subj), palabra: it.target.texto,
+    actividad: ACT_NAMES[it.type] || it.type, opciones: sess.options.length, modo: S.settings.mode, resultado,
+    primer: it.first || "", ayuda: it.help, eduAyuda: it.eduHelp ? 1 : 0, fallos: it.errors, sinResp: it.noResp, acceso: it.access,
+    tiempoMs: it.rt ?? "", posicion: sess.correctIdx + 1, elegida: it.chosen || "" });
+  const st = sess.stats;
+  if (resultado !== "saltada") st.n++;
+  if (resultado === "sola") st.sola++; else if (resultado === "con ayuda") st.ayuda++; else if (resultado === "no ha podido") st.noPudo++;
   save();
 }
 
-/* barra de la educadora */
+/* ---------- barra de la educadora ---------- */
 $("#eRepeat").onclick = () => {
-  if (!sess?.item) return;
+  if (!sess?.item || sess.paused) return;
   const t = sess.item.type;
   if (isChoice(t)) ask(); else if (t === "presenta") say(sess.item.target.texto);
 };
 $("#eHelp").onclick = () => { if (!sess?.item) return; sess.item.eduHelp = !sess.item.eduHelp; $("#eHelp").classList.toggle("on", sess.item.eduHelp); };
-$("#eSkip").onclick = () => { if (!sess) return; sess.i++; nextItem(); };
-$("#eEnd").onclick = endSession;
+/* «No cuenta»: fallo de acceso (ha tocado sin querer, no ha llegado…), no de conocimiento.
+   Tras un fallo: lo anula y repite la pregunta como al principio. Si no había respondido: se anota «no ha podido» y se pasa a la siguiente. */
+$("#eVoid").onclick = () => {
+  if (!sess?.item || sess.paused || !isChoice(sess.item.type)) return;
+  const it = sess.item; if (it.done) return;
+  if (!it.lastEvent){ it.access++; stopScan(); if (HAS_TTS) speechSynthesis.cancel(); finishItem("no ha podido"); return; }
+  Object.assign(it, { attempts: 0, help: 0, errors: 0, noResp: 0, lastEvent: null, access: it.access + 1 });
+  delete it.first; delete it.rt; delete it.chosen; delete it.tAsk;
+  sess.options.forEach(o => o.classList.remove("blink", "hidden"));
+  ask();
+};
+$("#ePause").onclick = () => {
+  if (!sess || sess.paused) return;
+  sess.paused = Date.now(); stopScan(); if (HAS_TTS) speechSynthesis.cancel(); $("#pause").hidden = false;
+};
+$("#eResume").onclick = () => {
+  if (!sess?.paused) return;
+  sess.pausedMs += Date.now() - sess.paused; sess.paused = 0; $("#pause").hidden = true;
+  const it = sess.item, t = it.type;
+  if (isChoice(t)){ if (it.rt == null) delete it.tAsk; ask(); }
+  else if (t === "presenta"){ lock(); say(it.target.texto).then(() => { if (sess && sess.item === it) unlock(); }); }
+  else unlock();
+};
+$("#eSkip").onclick = () => {
+  if (!sess || sess.paused) return;
+  if (HAS_TTS) speechSynthesis.cancel();
+  if (sess.item && isChoice(sess.item.type) && !sess.item.done){ sess.item.done = true; record("saltada"); }
+  stopMusic(); $("#reward").classList.remove("on");
+  sess.i++; nextItem();
+};
+/* «Terminar» pide confirmación: evita que un toque accidental corte la sesión */
+let endTimer = null;
+function resetEndBtn(){ clearTimeout(endTimer); const b = $("#eEnd"); delete b.dataset.c; b.textContent = "■ Terminar"; b.classList.remove("on"); }
+$("#eEnd").onclick = () => {
+  const b = $("#eEnd"); if (!sess) return;
+  if (!b.dataset.c){ b.dataset.c = 1; b.textContent = "¿Terminar? Pulsa otra vez"; b.classList.add("on"); endTimer = setTimeout(resetEndBtn, 3000); return; }
+  resetEndBtn(); showEnd("educadora");
+};
 
 /* ---------- registro ---------- */
 const logRows = () => { const f = $("#logSubj").value; return S.log.filter(r => !f || r.asignaturaId === f); };
-$("#logSubj").onchange = () => renderLog();
+$("#logSubj").onchange = () => { const ls = $("#logSubj"); if (ls.value === "") ls.dataset.todas = 1; else delete ls.dataset.todas; renderLog(); };
+const pctOf = (a, b) => b ? Math.round(100 * a / b) + " %" : "—";
 function renderLog(){
+  // una pregunta = una fila. Las filas de versiones anteriores (una por intento) solo cuentan cuando son el acierto final
+  const items = logRows().filter(r => r.v === 2 ? r.resultado !== "saltada" : (r.resultado === "sola" || r.resultado === "con ayuda"));
   const by = {};
-  logRows().forEach(r => { const b = by[r.palabra] ||= {sola:0,"con ayuda":0,error:0,"sin respuesta":0}; b[r.resultado]++; });
-  const rows = Object.entries(by).map(([p, b]) => {
-    const total = b.sola + b["con ayuda"] + b.error + b["sin respuesta"];
-    const pct = total ? Math.round(100 * b.sola / total) : 0;
-    return `<tr><td>${p}</td><td>${b.sola}</td><td>${b["con ayuda"]}</td><td>${b.error}</td><td>${b["sin respuesta"]}</td><td>${pct} %</td></tr>`;
+  items.forEach(r => {
+    const b = by[r.palabra] ||= { n: 0, sola: 0, ayuda: 0, noPudo: 0, t: [], conf: {} };
+    b.n++; if (r.resultado === "sola") b.sola++; else if (r.resultado === "con ayuda") b.ayuda++; else b.noPudo++;
+    if (typeof r.tiempoMs === "number") b.t.push(r.tiempoMs);
+    if (r.elegida) b.conf[r.elegida] = (b.conf[r.elegida] || 0) + 1;
+  });
+  const rows = Object.entries(by).sort((a, b) => a[0].localeCompare(b[0], "es")).map(([p, b]) => {
+    const t = b.t.length ? (b.t.reduce((x, y) => x + y, 0) / b.t.length / 1000).toFixed(1).replace(".", ",") + " s" : "—";
+    const conf = Object.entries(b.conf).sort((x, y) => y[1] - x[1]).slice(0, 2).map(([w, n]) => `${esc(w)} (${n})`).join(", ") || "—";
+    return `<tr><td>${esc(p)}</td><td>${b.n}</td><td>${b.sola}</td><td>${b.ayuda}</td><td>${b.noPudo}</td><td><b>${pctOf(b.sola, b.sola + b.ayuda)}</b></td><td>${t}</td><td>${conf}</td></tr>`;
   }).join("");
-  $("#regTable").innerHTML = logRows().length
-    ? `<table><tr><th>Palabra</th><th>Acierto sola</th><th>Con ayuda</th><th>Error</th><th>Sin respuesta</th><th>% sola</th></tr>${rows}</table>`
-    : `<p class="muted">Todavía no hay respuestas registradas.</p>`;
+  // ¿acierta menos según dónde esté la correcta? (ayuda a separar fallos de acceso de fallos de conocimiento)
+  const pos = {};
+  items.filter(r => r.v === 2 && r.primer && r.resultado !== "no ha podido").forEach(r => { const b = pos[r.posicion] ||= [0, 0]; b[1]++; if (r.primer === "acierto") b[0]++; });
+  const posTxt = Object.keys(pos).sort().map(k => `${k}.ª: ${pctOf(pos[k][0], pos[k][1])} (${pos[k][1]})`).join(" · ");
+  const ses = (S.sesiones || []).filter(s => !$("#logSubj").value || s.asignaturaId === $("#logSubj").value).slice(-8).reverse();
+  const FIN = { completa: "completa", tiempo: "tiempo máximo", educadora: "terminada por la educadora" };
+  const sesRows = ses.map(s => `<tr><td>${esc(new Date(s.fecha).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" }))}</td><td>${esc(s.actividad)}${s.bloque ? " · " + esc(s.bloque) : ""}</td><td>${Math.round(s.duracionS / 60)} min</td><td>${s.solas}/${s.preguntas}</td><td>${esc(FIN[s.fin] || s.fin)}</td><td>${esc(s.estado)}</td><td>${esc(s.nota)}</td></tr>`).join("");
+  $("#regTable").innerHTML = (items.length
+    ? `<table><tr><th>Palabra</th><th>Preguntas</th><th>Sola</th><th>Con ayuda</th><th>No ha podido</th><th>% sola</th><th>Tiempo medio</th><th>La confunde con</th></tr>${rows}</table>
+       <p class="muted">Cada pregunta cuenta una vez. «Sola»: acierta sin ayudas de la app ni de la educadora. «% sola» no incluye las preguntas marcadas como «no ha podido».${posTxt ? `<br>Aciertos al primer intento según la posición de la respuesta correcta: ${posTxt}. Si una posición sale mucho peor, puede ser un problema de acceso y no de vocabulario.` : ""}</p>`
+    : `<p class="muted">Todavía no hay respuestas registradas.</p>`) +
+    (ses.length ? `<h3>Últimas sesiones</h3><table><tr><th>Fecha</th><th>Actividad</th><th>Duración</th><th>Sola / preguntas</th><th>Final</th><th>Cómo ha estado</th><th>Nota</th></tr>${sesRows}</table>` : "");
+  showBackupWarn();
 }
+const csvCell = v => { v = String(v ?? ""); return /[";\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v; };
+function download(name, text, type){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type })); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+/* CSV con punto y coma: es lo que abre bien Excel en español */
 $("#csv").onclick = () => {
-  const head = "sesion,fecha,asignatura,palabra,actividad,opciones,modo,resultado,ayuda";
-  const csv = [head, ...logRows().map(r => [r.sesion, r.fecha, (r.asignatura || subjName(r.asignaturaId)).replace(/,/g, " "), r.palabra, r.actividad ?? r.nivel, r.opciones, r.modo, r.resultado, r.ayuda].join(","))].join("\n");
-  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], {type:"text/csv"})); a.download = "registro-app-summer.csv"; a.click();
+  const head = ["sesion","fecha","asignatura","palabra","actividad","opciones","modo","resultado","primer_intento","ayuda_maxima","ayuda_educadora","fallos","sin_respuesta","fallos_acceso","tiempo_s","posicion_correcta","eligio_primero"];
+  const lines = logRows().map(r => [r.sesion, r.fecha, r.asignatura || subjName(r.asignaturaId), r.palabra, r.actividad ?? r.nivel, r.opciones, r.modo, r.resultado, r.primer, r.ayuda, r.eduAyuda, r.fallos, r.sinResp, r.acceso,
+    typeof r.tiempoMs === "number" ? (r.tiempoMs / 1000).toFixed(1).replace(".", ",") : "", r.posicion, r.elegida].map(csvCell).join(";"));
+  download("registro-app-summer.csv", "﻿" + [head.join(";"), ...lines].join("\r\n"), "text/csv");
 };
-$("#clearLog").onclick = () => { if ($("#clearLog").dataset.c){ const f = $("#logSubj").value; S.log = f ? S.log.filter(r => r.asignaturaId !== f) : []; save(); renderLog(); delete $("#clearLog").dataset.c; $("#clearLog").textContent = "Borrar registro"; } else { $("#clearLog").dataset.c = 1; $("#clearLog").textContent = "¿Seguro? Pulsa otra vez"; } };
+$("#csvSes").onclick = () => {
+  const head = ["sesion","fecha","asignatura","bloque","actividad","modo","duracion_s","preguntas","sola","con_ayuda","no_ha_podido","final","estado","nota"];
+  const lines = (S.sesiones || []).map(s => [s.id, s.fecha, s.asignatura, s.bloque, s.actividad, s.modo, s.duracionS, s.preguntas, s.solas, s.conAyuda, s.noPudo, s.fin, s.estado, s.nota].map(csvCell).join(";"));
+  download("sesiones-app-summer.csv", "﻿" + [head.join(";"), ...lines].join("\r\n"), "text/csv");
+};
+$("#clearLog").onclick = () => { if ($("#clearLog").dataset.c){ const f = $("#logSubj").value; S.log = f ? S.log.filter(r => r.asignaturaId !== f) : []; S.sesiones = f ? (S.sesiones || []).filter(s => s.asignaturaId !== f) : []; save(); renderLog(); delete $("#clearLog").dataset.c; $("#clearLog").textContent = "Borrar registro"; } else { $("#clearLog").dataset.c = 1; $("#clearLog").textContent = "¿Seguro? Pulsa otra vez"; } };
 
-renderAll();
-window.APP = { get S(){ return S; }, save, saveNow, renderAll, compressImage, kb, switchSubject };
+/* ---------- copia de seguridad completa (vocabulario, ajustes y registro; nunca la clave de GitHub) ---------- */
+function showBackupWarn(){
+  const el = $("#backupWarn"), last = S.ultimaCopia ? new Date(S.ultimaCopia) : null;
+  const days = last ? Math.floor((Date.now() - last) / 86400000) : null;
+  const need = S.log.length > 0 && (days == null || days >= 14);
+  el.className = need ? "warn" : "muted";
+  el.textContent = (need ? "⚠️ " : "") + (last ? `Última copia de seguridad: ${last.toLocaleDateString("es-ES")} (hace ${days} días).` : "Todavía no se ha hecho ninguna copia de seguridad.") +
+    (need ? " El registro solo está en este dispositivo: conviene guardar una copia." : "");
+}
+$("#backup").onclick = async () => {
+  S.ultimaCopia = new Date().toISOString(); await saveNow();
+  download(`copia-app-summer-${S.ultimaCopia.slice(0, 10)}.json`, JSON.stringify({ formato: "app-summer-copia", version: 1, fecha: S.ultimaCopia, estado: JSON.parse(JSON.stringify(S)) }), "application/json");
+  showBackupWarn();
+};
+let pendingRestore = null;
+$("#restore").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d?.formato !== "app-summer-copia" || !d.estado?.asignaturas) throw 0;
+    pendingRestore = d; $("#restoreOk").hidden = false;
+    $("#restoreMsg").textContent = `Copia del ${new Date(d.fecha).toLocaleString("es-ES")}: ${Object.keys(d.estado.asignaturas).length} asignaturas y ${(d.estado.log || []).length} respuestas. Sustituirá TODO lo que hay ahora en este dispositivo.`;
+  } catch(err){ $("#restoreMsg").textContent = "Ese archivo no es una copia de seguridad de APP SUMMER."; }
+};
+$("#restoreOk").onclick = async () => {
+  if (!pendingRestore) return;
+  const st = pendingRestore.estado;
+  Object.values(st.asignaturas).forEach(a => { a.nombre = cleanText(a.nombre); a.bloques = (a.bloques || []).map(cleanText).filter(Boolean); a.words = (a.words || []).map(cleanWord).filter(w => w.texto); });
+  clearTimeout(saveTimer);
+  const data = JSON.stringify(st);
+  try { if (DB.db) await DB.set("state", data); else localStorage.setItem(KEY, data); location.reload(); }
+  catch(err){ $("#restoreMsg").textContent = "No se ha podido recuperar la copia (no cabe en este dispositivo)."; }
+};
+
+/* ---------- asistente de ajuste ----------
+   Un juego corto de «toca la estrella» que mide cómo responde la alumna y propone los ajustes de partida.
+   Con tablet o ratón: dónde llega, cuánto mantiene el toque, si arrastra y si hay toques repetidos.
+   Con pulsador: cuánto tarda en pulsar cuando aparece la estrella. No guarda nada del vocabulario. */
+let wiz = null;
+const median = a => { if (!a.length) return null; const s = a.slice().sort((x, y) => x - y), m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const QUADS = ["BL","BR","TL","TR","BR","BL","TR","TL"];
+$("#wizStart").onclick = () => {
+  const scan = S.settings.mode === "scan";
+  wiz = { scan, trial: -1, total: scan ? 6 : QUADS.length, hits: [], contacts: [], rebounds: [], early: 0, live: new Map(), maxLive: 0, lastHit: 0, shownAt: 0, timer: null, open: false };
+  $("#wizResult").hidden = true; $("#wizTarget").hidden = true; $("#wiz").hidden = false;
+  unlockAudio(); goFull(true);
+  say(scan ? "Cuando salga la estrella, pulsa." : "¡Toca la estrella!").then(() => { if (wiz) wizNext(); });
+};
+function wizNext(){
+  if (!wiz) return;
+  clearTimeout(wiz.timer); wiz.trial++; wiz.open = false;
+  const T = $("#wizTarget"); T.hidden = true; T.classList.remove("hit");
+  $("#wizCount").textContent = `${Math.min(wiz.trial + 1, wiz.total)} de ${wiz.total}`;
+  if (wiz.trial >= wiz.total) return wizEnd();
+  const show = () => {
+    if (!wiz) return;
+    if (wiz.scan){ T.style.left = "50%"; T.style.top = "50%"; }
+    else { const q = QUADS[wiz.trial]; T.style.left = q[1] === "L" ? "25%" : "75%"; T.style.top = q[0] === "T" ? "27%" : "73%"; }
+    T.hidden = false; wiz.open = true; wiz.shownAt = Date.now();
+    wiz.timer = setTimeout(() => { wiz.hits.push({ q: wiz.scan ? "C" : QUADS[wiz.trial], ok: false }); wizNext(); }, wiz.scan ? 10000 : 12000);
+  };
+  wiz.timer = setTimeout(show, wiz.scan ? 1500 + Math.random() * 2500 : 700);
+}
+function wizHit(){
+  if (!wiz || !wiz.open) return;
+  wiz.open = false; clearTimeout(wiz.timer); wiz.lastHit = Date.now();
+  wiz.hits.push({ q: wiz.scan ? "C" : QUADS[wiz.trial], ok: true, rt: Date.now() - wiz.shownAt });
+  $("#wizTarget").classList.add("hit"); melody(0.45);
+  wiz.timer = setTimeout(wizNext, 900);
+}
+function wizKey(){   // pulsador
+  if (!wiz || !$("#wizResult").hidden) return;
+  if (!wiz.scan) return;
+  const now = Date.now();
+  if (wiz.open) wizHit();
+  else if (wiz.lastHit && now - wiz.lastHit < 1500) wiz.rebounds.push(now - wiz.lastHit);
+  else wiz.early++;
+}
+$("#wizArea").addEventListener("pointerdown", e => {
+  if (!wiz || wiz.scan || !$("#wizResult").hidden) return;
+  const now = Date.now(), onTarget = !!e.target.closest("#wizTarget");
+  wiz.live.set(e.pointerId, { t: now, x: e.clientX, y: e.clientY, onTarget, counted: false });
+  wiz.maxLive = Math.max(wiz.maxLive, wiz.live.size);
+  if (wiz.lastHit && now - wiz.lastHit < 1500 && !wiz.open){ wiz.rebounds.push(now - wiz.lastHit); return; }
+  if (wiz.open){ wiz.live.get(e.pointerId).counted = true; wiz.live.get(e.pointerId).hit = onTarget; if (onTarget) wizHit(); }
+});
+const wizUp = e => {
+  if (!wiz) return; const c = wiz.live.get(e.pointerId); if (!c) return; wiz.live.delete(e.pointerId);
+  if (!c.counted) return;
+  const side = Math.min(innerWidth, innerHeight);
+  wiz.contacts.push({ hit: !!c.hit, ms: Date.now() - c.t, drift: Math.hypot(e.clientX - c.x, e.clientY - c.y) / side });
+};
+$("#wizArea").addEventListener("pointerup", wizUp); $("#wizArea").addEventListener("pointercancel", wizUp);
+$("#wizSkip").onclick = () => { if (wiz && wiz.trial < wiz.total && $("#wizResult").hidden){ if (wiz.open) wiz.hits.push({ q: wiz.scan ? "C" : QUADS[wiz.trial], ok: false }); wizNext(); } };
+$("#wizClose").onclick = () => wizClose();
+function wizClose(){ if (wiz) clearTimeout(wiz.timer); wiz = null; if (HAS_TTS) speechSynthesis.cancel(); $("#wiz").hidden = true; goFull(false); }
+function wizPropose(w){   // de las medidas a los ajustes propuestos
+  const ok = w.hits.filter(h => h.ok), prop = {}, why = [], med = [];
+  const rate = f => { const a = w.hits.filter(h => f(h.q)); return a.length ? a.filter(h => h.ok).length / a.length : null; };
+  const rtMed = median(ok.map(h => h.rt));
+  med.push(["Estrellas conseguidas", `${ok.length} de ${w.hits.length}`]);
+  if (rtMed != null) med.push(["Tiempo hasta responder (mediana)", (rtMed / 1000).toFixed(1).replace(".", ",") + " s"]);
+  const reb = w.rebounds.length ? Math.max(...w.rebounds) : null;
+  if (ok.length < 3) return { prop, why: ["No hay datos suficientes para proponer cambios. Repite el asistente en otro momento o ajusta a mano."], med };
+  if (w.scan){
+    prop.scan = clamp(Math.round((rtMed * 1.5 / 1000 + 0.5) * 2) / 2, 1.5, 8);
+    why.push(`Tiempo de barrido por opción: ${String(prop.scan).replace(".", ",")} s (su tiempo de reacción y un margen).`);
+    med.push(["Pulsaciones antes de tiempo", w.early]);
+  } else {
+    const top = rate(q => q[0] === "T"), bot = rate(q => q[0] === "B"), left = rate(q => q[1] === "L"), right = rate(q => q[1] === "R");
+    med.push(["Aciertos arriba / abajo", `${pctOf(top, 1)} / ${pctOf(bot, 1)}`], ["Aciertos izquierda / derecha", `${pctOf(left, 1)} / ${pctOf(right, 1)}`]);
+    prop.zone = bot >= .75 && top <= .5 ? "bottom" : top >= .75 && bot <= .5 ? "top" : left >= .75 && right <= .5 ? "left" : right >= .75 && left <= .5 ? "right" : "full";
+    const ZN = { full: "toda la pantalla", bottom: "solo la mitad de abajo", top: "solo la mitad de arriba", left: "solo el lado izquierdo", right: "solo el lado derecho" };
+    why.push(`Zona de las opciones: ${ZN[prop.zone]}` + (prop.zone === "full" ? " (llega bien a las cuatro zonas)." : " (es donde acierta con claridad)."));
+    const dur = median(w.contacts.map(c => c.ms)), drift = median(w.contacts.map(c => c.drift)), miss = w.contacts.filter(c => !c.hit).length;
+    if (dur != null) med.push(["Duración del toque (mediana)", (dur / 1000).toFixed(1).replace(".", ",") + " s"], ["Toques fuera de la estrella", miss], ["Contactos a la vez (máximo)", w.maxLive]);
+    if (dur != null && (dur > 1000 || drift > 0.12)){ prop.tap = "down"; why.push("Aceptar la respuesta: al tocar (mantiene la mano apoyada o la arrastra, así que no conviene esperar a que la levante)."); }
+    else if (dur != null && miss >= 4){ prop.tap = "hold"; prop.hold = clamp(Math.round(dur * 0.6 / 100) / 10, 0.3, 1); why.push(`Aceptar la respuesta: al mantener el toque ${String(prop.hold).replace(".", ",")} s (hay bastantes toques fuera de la estrella; así los roces no cuentan).`); }
+    else { prop.tap = "up"; why.push("Aceptar la respuesta: al levantar la mano (toques limpios y breves)."); }
+  }
+  prop.deb = reb != null ? clamp(Math.ceil((reb / 1000 + 0.3) * 10) / 10, 0.8, 3) : 0.8;
+  why.push(`Ignorar toques o pulsaciones repetidas durante ${String(prop.deb).replace(".", ",")} s` + (reb != null ? " (se han detectado toques repetidos justo después de acertar)." : "."));
+  return { prop, why, med };
+}
+function wizEnd(){
+  const r = wizPropose(wiz); wiz.result = r;
+  $("#wizTarget").hidden = true;
+  $("#wizMed").innerHTML = r.med.map(([a, b]) => `<tr><td>${esc(a)}</td><td>${esc(b)}</td></tr>`).join("");
+  $("#wizWhy").innerHTML = r.why.map(t => `<li>${esc(t)}</li>`).join("");
+  $("#wizApply").hidden = !Object.keys(r.prop).length;
+  $("#wizResult").hidden = false;
+  S.calibracion = { fecha: new Date().toISOString(), modo: S.settings.mode, medidas: r.med, propuesta: r.prop }; save();
+}
+$("#wizApply").onclick = () => { if (wiz?.result) Object.assign(S.settings, wiz.result.prop); save(); bindSettings(); wizClose(); $("#wizMsg").textContent = "✓ Ajustes del asistente aplicados. Puedes retocarlos a mano."; };
+$("#wizKeep").onclick = () => wizClose();
+
+/* ---------- uso sin conexión ----------
+   La app se guarda en el dispositivo mediante sw.js. Aquí se guardan además los pictogramas elegidos. */
+const PICTO_CACHE = "summer-pictos-v1";
+let pictoTimer = null;
+async function cachePictos(){
+  const el = $("#offMsg");
+  if (!("caches" in window) || !("serviceWorker" in navigator) || !location.protocol.startsWith("http")){ el.textContent = ""; return; }
+  const ids = [...new Set(Object.values(S.asignaturas).flatMap(a => a.words).filter(w => w.pictoId && !(w.useFoto && w.foto)).map(w => w.pictoId))];
+  let ok = 0;
+  try {
+    const c = await caches.open(PICTO_CACHE);
+    for (const id of ids){
+      const u = pic(id);
+      if (await c.match(u)){ ok++; continue; }
+      try { const r = await fetch(u, { mode: "cors" }); if (r.ok){ await c.put(u, r); ok++; continue; } } catch(e){}
+      try { const r = await fetch(u, { mode: "no-cors" }); await c.put(u, r); ok++; } catch(e){}
+    }
+  } catch(e){}
+  el.textContent = ok === ids.length ? `✓ Lista para usar sin conexión (${ok} pictogramas guardados en este dispositivo).` : `⚠️ Faltan ${ids.length - ok} pictogramas por guardar para usarla sin conexión: conéctate a internet y vuelve a abrir esta pestaña.`;
+  el.className = ok === ids.length ? "muted" : "warn";
+}
+function cachePictosSoon(){ clearTimeout(pictoTimer); pictoTimer = setTimeout(cachePictos, 2500); }
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+try { navigator.storage?.persist?.(); } catch(e){}   // pide al navegador que no borre los datos si falta espacio
+
+bindSettings(); renderMusic(); showVoiceStatus();
+renderAll(); cachePictosSoon();
+window.APP = { get S(){ return S; }, get sess(){ return sess; }, get wiz(){ return wiz; }, save, saveNow, renderAll, compressImage, kb, switchSubject, wizPropose, cachePictos };
 </script>
 </body>
 </html>
