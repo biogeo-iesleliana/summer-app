@@ -19,6 +19,11 @@
    "useFoto": false,
    "bloques": [
     "Vegetales"
+   ],
+   "cat": "un ser vivo",
+   "frase": "La planta necesita agua.",
+   "noCon": [
+    "hoja"
    ]
   },
   {
@@ -30,7 +35,9 @@
    "useFoto": false,
    "bloques": [
     "Vegetales"
-   ]
+   ],
+   "cat": "una parte de la planta",
+   "frase": "La raíz está bajo la tierra."
   },
   {
    "texto": "hoja",
@@ -43,6 +50,11 @@
    "useFoto": false,
    "bloques": [
     "Vegetales"
+   ],
+   "cat": "una parte de la planta",
+   "frase": "La hoja es verde.",
+   "noCon": [
+    "planta"
    ]
   },
   {
@@ -56,7 +68,9 @@
    "useFoto": false,
    "bloques": [
     "Vegetales"
-   ]
+   ],
+   "cat": "una parte de la planta",
+   "frase": "La flor huele bien."
   },
   {
    "texto": "semilla",
@@ -67,7 +81,9 @@
    "useFoto": false,
    "bloques": [
     "Vegetales"
-   ]
+   ],
+   "cat": "una parte de la planta",
+   "frase": "De la semilla nace una planta."
   },
   {
    "texto": "sol",
@@ -78,7 +94,9 @@
     5402
    ],
    "useFoto": false,
-   "bloques": []
+   "bloques": [],
+   "cat": "una estrella",
+   "frase": "El sol da luz y calor."
   },
   {
    "texto": "MINERAL",
@@ -92,6 +110,11 @@
    "useFoto": true,
    "bloques": [
     "Geosfera"
+   ],
+   "cat": "un material de la Tierra",
+   "frase": "El mineral brilla.",
+   "noCon": [
+    "ROCA"
    ]
   },
   {
@@ -104,6 +127,11 @@
    "useFoto": false,
    "bloques": [
     "Geosfera"
+   ],
+   "cat": "un material de la Tierra",
+   "frase": "La roca es muy dura.",
+   "noCon": [
+    "MINERAL"
    ]
   },
   {
@@ -117,7 +145,9 @@
    "useFoto": false,
    "bloques": [
     "Geosfera"
-   ]
+   ],
+   "cat": "un lugar",
+   "frase": "La montaña es muy alta."
   },
   {
    "texto": "mina",
@@ -129,7 +159,9 @@
    "useFoto": false,
    "bloques": [
     "Geosfera"
-   ]
+   ],
+   "cat": "un lugar",
+   "frase": "En la mina se sacan minerales."
   }
  ]
 }

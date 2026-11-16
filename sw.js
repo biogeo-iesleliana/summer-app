@@ -2,7 +2,7 @@
    - La app (esta carpeta): primero la red, para recibir las actualizaciones; sin conexión, la copia guardada.
    - Pictogramas de ARASAAC y tipografía: primero la copia guardada.
    - GitHub y el buscador de ARASAAC: siempre por la red (no se guardan). */
-const V = "summer-v0.10.0";
+const V = "summer-v0.11.0";
 const PICTOS = "summer-pictos-v1", FONTS = "summer-fonts-v1";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "plantillas/plantilla-asignatura.xlsx"];
 
