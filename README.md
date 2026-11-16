@@ -8,12 +8,13 @@ Aplicación web libre para aprender **vocabulario básico de una asignatura con 
 - 7 actividades: causa-efecto, presentación, «¿Dónde está…?», escucha y elige, lee y elige, «¿Cómo se llama?» y repaso mezclado; con 2–4 opciones, ayudas de menos a más (repetir → la correcta parpadea → solo queda la correcta) y refuerzo.
 - Barra para la educadora: repetir, marcar «respuesta con mi ayuda», saltar, terminar.
 - Registro de respuestas (sola / con ayuda / error / sin respuesta) por asignatura, exportable a CSV.
+- Importación de asignaturas desde **hoja de cálculo** (.xlsx o .csv) con la plantilla de `plantillas/plantilla-asignatura.xlsx`: para docentes sin cuenta de GitHub.
 - Varias **asignaturas** en el mismo dispositivo (cada una con sus palabras y bloques temáticos); se cambia de una a otra con un desplegable.
 - Cada asignatura (palabras, pictogramas y fotos) se guarda en la carpeta `unidades/` del repositorio con el botón **☁️ Guardar en GitHub** (requiere una clave de GitHub limitada a este repositorio) y se cargan desde cualquier dispositivo.
 - **Los datos de la alumna se guardan solo en el dispositivo.**
 
 ## Estado
-Prototipo 0.7: un único archivo `index.html`, sin instalación. Necesita internet para buscar pictogramas.
+Prototipo 0.8: un único archivo `index.html`, sin instalación. Necesita internet para buscar pictogramas.
 
 Próxima versión: instalable como app (PWA), funcionamiento sin conexión, más niveles de actividad y versión en valenciano.
 

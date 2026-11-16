@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APP SUMMER · Prototipo 0.7</title>
+<title>APP SUMMER · Prototipo 0.8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
@@ -66,7 +66,7 @@
 </head>
 <body>
 <header>
-  <h1>APP SUMMER <span class="muted">prototipo 0.7</span></h1>
+  <h1>APP SUMMER <span class="muted">prototipo 0.8</span></h1>
   <button data-v="vocab" class="on">1 · Vocabulario</button>
   <button data-v="ajustes">2 · Ajustes</button>
   <button data-v="sesion">3 · Sesión</button>
@@ -104,6 +104,11 @@
         <div class="row">
           <button class="b" id="saveUnit">💾 Guardar copia en archivo</button>
           <label class="b" style="cursor:pointer">📂 Abrir archivo<input type="file" accept=".json,application/json" hidden id="openUnit"></label>
+        </div>
+        <div class="row">
+          <label class="b" style="cursor:pointer">📊 Importar hoja de cálculo<input type="file" accept=".xlsx,.csv,text/csv" hidden id="openSheet"></label>
+          <a class="b" href="plantillas/plantilla-asignatura.xlsx" download style="text-decoration:none;color:inherit">⬇️ Descargar plantilla</a>
+          <span class="muted">Otros docentes rellenan la plantilla (Excel o Google Sheets) y te la envían; al importarla se crea su asignatura.</span>
         </div>
       </details>
       <p class="muted">Cada asignatura (palabras, pictogramas, fotos y bloques) se guarda en la carpeta <b>unidades</b> del repositorio y se puede traer a cualquier dispositivo. En un mismo dispositivo puede haber varias asignaturas: cambia de una a otra con el desplegable. El registro de la alumna <b>no</b> se sube: se queda solo en este dispositivo. El repositorio es público: no subas fotos de personas.</p>
@@ -440,6 +445,111 @@ const msg = t => { $("#unitMsg").textContent = t; if (t) setTimeout(() => { if (
 
 $("#unitName").onchange = e => { S.unitName = e.target.value.trim(); save(); renderSubjects(); };
 
+
+/* ---------- importar una asignatura desde hoja de cálculo (.xlsx o .csv) ----------
+   Formato de la plantilla: «Asignatura:» y su nombre en la fila 1; cabecera con «Palabra» y, opcionalmente,
+   «Bloques» (separados por ;), «Imagen web» y «Pictograma». Se lee sin librerías externas. */
+async function unzip(buf){
+  const u8 = new Uint8Array(buf), dv = new DataView(buf), out = {};
+  let e = u8.length - 22; while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error("El archivo no es una hoja de cálculo .xlsx válida.");
+  let p = dv.getUint32(e + 16, true); const n = dv.getUint16(e + 10, true);
+  for (let i = 0; i < n; i++){
+    const method = dv.getUint16(p + 10, true), size = dv.getUint32(p + 20, true);
+    const nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nl));
+    p += 46 + nl + xl + cl;
+    if (!/^xl\/(workbook\.xml|_rels\/workbook\.xml\.rels|sharedStrings\.xml|worksheets\/[^/]+\.xml)$/.test(name)) continue;
+    const start = off + 30 + dv.getUint16(off + 26, true) + dv.getUint16(off + 28, true);
+    const data = u8.subarray(start, start + size);
+    out[name] = method === 0 ? data : new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+  }
+  return out;
+}
+async function readXlsx(buf){
+  const f = await unzip(buf), dec = new TextDecoder();
+  const xml = n => f[n] ? new DOMParser().parseFromString(dec.decode(f[n]), "application/xml") : null;
+  const ss = xml("xl/sharedStrings.xml");
+  const shared = ss ? [...ss.getElementsByTagName("si")].map(si => [...si.getElementsByTagName("t")].map(t => t.textContent).join("")) : [];
+  let target = "worksheets/sheet1.xml";
+  try {   // primera hoja del libro
+    const first = xml("xl/workbook.xml").getElementsByTagName("sheet")[0], rid = first.getAttribute("r:id");
+    const rel = [...xml("xl/_rels/workbook.xml.rels").getElementsByTagName("Relationship")].find(r => r.getAttribute("Id") === rid);
+    if (rel) target = rel.getAttribute("Target").replace(/^\/?xl\//, "").replace(/^\//, "");
+  } catch(e){}
+  const sh = xml("xl/" + target); if (!sh) throw new Error("No se encuentra la hoja de datos.");
+  const col = ref => [...ref.replace(/\d+/g, "")].reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0) - 1;
+  return [...sh.getElementsByTagName("row")].map(row => {
+    const r = [];
+    for (const c of row.getElementsByTagName("c")){
+      const t = c.getAttribute("t"), v = c.getElementsByTagName("v")[0]?.textContent ?? "";
+      r[col(c.getAttribute("r"))] = t === "s" ? shared[+v] : t === "inlineStr" ? [...c.getElementsByTagName("t")].map(x => x.textContent).join("") : v;
+    }
+    return Array.from(r, x => (x ?? "").toString().trim());
+  });
+}
+function readCsv(text){
+  text = text.replace(/^﻿/, "");
+  const first = text.split(/\r?\n/)[0] || "";
+  const d = [";", "\t", ","].sort((a, b) => first.split(b).length - first.split(a).length)[0];
+  const rows = []; let row = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++){
+    const ch = text[i];
+    if (q){ if (ch === '"' && text[i + 1] === '"'){ cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; }
+    else if (ch === '"') q = true;
+    else if (ch === d){ row.push(cell.trim()); cell = ""; }
+    else if (ch === "\n" || ch === "\r"){ if (ch === "\r" && text[i + 1] === "\n") i++; row.push(cell.trim()); rows.push(row); row = []; cell = ""; }
+    else cell += ch;
+  }
+  if (cell || row.length){ row.push(cell.trim()); rows.push(row); }
+  return rows;
+}
+function sheetToUnit(rows, fileName){
+  const norm = x => (x || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  let nombre = "";
+  for (const r of rows.slice(0, 4)){ const i = r.findIndex(x => /^asignatura:?$/.test(norm(x))); if (i >= 0 && r[i + 1]) { nombre = r[i + 1]; break; } }
+  if (!nombre || /escribe aqui/.test(norm(nombre))) nombre = fileName.replace(/\.(xlsx|csv)$/i, "").replace(/[-_]+/g, " ");
+  const h = rows.findIndex(r => r.some(x => norm(x).startsWith("palabra")));
+  const head = h >= 0 ? rows[h].map(norm) : ["palabra"];
+  const ci = key => head.findIndex(x => x.startsWith(key));
+  const cW = Math.max(0, ci("palabra")), cB = ci("bloque"), cI = ci("imagen"), cP = ci("pictograma");
+  const seen = new Set(), palabras = [];
+  for (const r of rows.slice(h + 1)){
+    const texto = (r[cW] || "").trim(); if (!texto || seen.has(texto.toLowerCase())) continue;
+    seen.add(texto.toLowerCase());
+    const bloques = cB >= 0 ? (r[cB] || "").split(/[;|]/).map(x => x.trim()).filter(Boolean) : [];
+    const id = cP >= 0 ? parseInt(r[cP], 10) : NaN;
+    const url = cI >= 0 ? (r[cI] || "").trim() : "";
+    palabras.push({ texto, bloques, pictoId: Number.isFinite(id) ? id : null, cands: Number.isFinite(id) ? [id] : [], fotoUrl: /^https?:\/\//i.test(url) ? url : "" });
+  }
+  if (!palabras.length) throw new Error("No se ha encontrado ninguna palabra. Comprueba que hay una columna «Palabra».");
+  const bloques = []; palabras.forEach(p => p.bloques.forEach(b => { if (!bloques.some(x => x.toLowerCase() === b.toLowerCase())) bloques.push(b); }));
+  // un mismo bloque escrito con distinta mayúscula se unifica
+  palabras.forEach(p => p.bloques = [...new Set(p.bloques.map(b => bloques.find(x => x.toLowerCase() === b.toLowerCase())))]);
+  return { formato: "app-summer-unidad", version: 1, nombre: nombre.trim(), bloques, palabras, _import: true };
+}
+$("#openSheet").onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try {
+    const rows = /\.csv$/i.test(f.name) ? readCsv(await f.text()) : await readXlsx(await f.arrayBuffer());
+    offerUnit(sheetToUnit(rows, f.name));
+  } catch(err){ msg(err.message || "No se pudo leer la hoja de cálculo."); }
+};
+// tras importar: pictogramas de ARASAAC para las palabras sin imagen y descarga de las imágenes web
+async function enrichImported(id){
+  const a = S.asignaturas[id]; if (!a) return;
+  const todo = a.words.filter(w => w.fotoUrl || !w.pictoId);
+  let n = 0;
+  for (const w of todo){
+    msg(`Preparando imágenes: ${++n} de ${todo.length}…`);
+    if (w.fotoUrl){ try { w.foto = await loadPhotoFromUrl(w.fotoUrl); w.useFoto = true; } catch(e){} delete w.fotoUrl; }
+    if (!w.pictoId){ try { w.cands = await searchArasaac(w.texto); if (w.cands.length) w.pictoId = w.cands[0]; } catch(e){} }
+    save(); if (S.actual === id) renderWords();
+  }
+  const sin = a.words.filter(w => !hasImg(w)).map(w => w.texto);
+  msg(sin.length ? `Importada. Sin imagen: ${sin.join(", ")}. Revisa y pulsa «Guardar en GitHub».` : "Importada. Revisa los pictogramas y pulsa «☁️ Guardar en GitHub».");
+}
+
 /* ---------- asignaturas en este dispositivo ---------- */
 function renderSubjects(){
   const ids = Object.keys(S.asignaturas).sort((a, b) => subjName(a).localeCompare(subjName(b), "es"));
@@ -528,7 +638,8 @@ function offerUnit(unit){
   pendingUnit = unit;
   const id = sameName(unit.nombre);
   if (!id || !S.asignaturas[id].words.length) return applyUnit();
-  $("#loadRepo").textContent = `«${unit.nombre}» ya está en este dispositivo. ¿Sustituirla por la de GitHub? Pulsa otra vez`;
+  $("#loadRepo").textContent = `Sí, sustituir «${unit.nombre}»`;
+  msg(`«${unit.nombre}» ya existe en este dispositivo. Para sustituirla, pulsa «Sí, sustituir».`);
 }
 async function applyUnit(){
   const u = pendingUnit; pendingUnit = null; $("#loadRepo").textContent = "Traer a este dispositivo";
@@ -536,11 +647,12 @@ async function applyUnit(){
   S.asignaturas[id] = {
     nombre: u.nombre,
     bloques: u.bloques || [...new Set(u.palabras.flatMap(p => p.bloques || []))],
-    words: u.palabras.map(p => ({ texto: p.texto, pictoId: p.pictoId ?? null, cands: p.cands || [], foto: p.foto, useFoto: !!p.useFoto, bloques: p.bloques || [] }))
+    words: u.palabras.map(p => ({ texto: p.texto, pictoId: p.pictoId ?? null, cands: p.cands || [], foto: p.foto, useFoto: !!p.useFoto, bloques: p.bloques || [], ...(p.fotoUrl ? { fotoUrl: p.fotoUrl } : {}) }))
   };
   S.actual = id;
   const ok = await saveNow();
   renderAll(); msg(ok ? `«${u.nombre}» está en este dispositivo.` : "Se ha abierto, pero no cabe en este dispositivo (demasiadas fotos).");
+  if (u._import) enrichImported(id);
 }
 
 $("#openUnit").onchange = async e => {
