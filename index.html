@@ -3,12 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>APP SUMMER · Prototipo 0.8</title>
+<title>APP SUMMER · Prototipo 0.9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{--bg:#f7f7f2;--ink:#1d1d1d;--muted:#5b5b5b;--card:#fff;--line:#d9d9d0;--acc:#1f6feb;--ok:#1a7f37;--scan:#ffb300;}
   *{box-sizing:border-box}
+  [hidden]{display:none !important}
   html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Atkinson Hyperlegible",system-ui,sans-serif;font-size:18px}
   header{display:flex;gap:.5rem;align-items:center;padding:.6rem 1rem;background:#fff;border-bottom:1px solid var(--line);flex-wrap:wrap}
   header h1{font-size:1.1rem;margin:0 1rem 0 0}
@@ -36,6 +37,15 @@
   /* ---- pantalla de la alumna ---- */
   #stage{position:fixed;inset:0;background:#fff;display:none;flex-direction:column;z-index:10}
   #stage.on{display:flex}
+  #stage.mouse .opt:hover{border-color:var(--acc);box-shadow:0 0 0 6px #cfe0ff}
+  .opt{position:relative;overflow:hidden}
+  .opt.dwell::after{content:"";position:absolute;left:0;bottom:0;height:14px;width:0;background:var(--acc);animation:dwellbar var(--dwell,1.5s) linear forwards}
+  @keyframes dwellbar{to{width:100%}}
+  #ayuda h2{margin:1.2rem 0 .4rem;font-size:1.25rem}
+  #ayuda details{background:#fff;border:1px solid var(--line);border-radius:12px;padding:.6rem .9rem;margin:.5rem 0}
+  #ayuda summary{cursor:pointer;font-weight:700;font-size:1.05rem}
+  #ayuda li{margin:.25rem 0}
+  #ayuda table{margin:.5rem 0}
   #prompt{text-align:center;font-size:2.2rem;font-weight:700;padding:1rem;min-height:4.5rem;text-transform:uppercase;letter-spacing:.03em;display:flex;align-items:center;justify-content:center}
   #prompt.big{font-size:4rem}
   #prompt img{height:28vh;max-width:80vw;object-fit:contain}
@@ -68,11 +78,12 @@
 </head>
 <body>
 <header>
-  <h1>APP SUMMER <span class="muted">prototipo 0.8.1</span></h1>
+  <h1>APP SUMMER <span class="muted">prototipo 0.9</span></h1>
   <button data-v="vocab" class="on">1 · Vocabulario</button>
   <button data-v="ajustes">2 · Ajustes</button>
   <button data-v="sesion">3 · Sesión</button>
   <button data-v="registro">4 · Registro</button>
+  <button data-v="ayuda">5 · Ayuda</button>
 </header>
 
 <main>
@@ -137,7 +148,10 @@
   <!-- AJUSTES -->
   <section id="ajustes" class="view">
     <label class="f">Forma de responder de la alumna
-      <select id="sMode"><option value="touch">Tocar la pantalla (tablet)</option><option value="scan">Pulsador con barrido (portátil)</option></select>
+      <select id="sMode"><option value="touch">Tocar la pantalla (tablet)</option><option value="scan">Pulsador con barrido (portátil)</option><option value="mouse">Ratón (ordenador; también ratón de cabeza)</option></select>
+    </label>
+    <label class="f" id="dwellRow">Con ratón: elegir dejando el puntero quieto encima durante (segundos; 0 = solo con clic)
+      <input id="sDwell" type="number" min="0" max="5" step="0.25">
     </label>
     <label class="f">Número de opciones por pregunta
       <select id="sN"><option>2</option><option>3</option><option>4</option></select>
@@ -154,7 +168,7 @@
     <label class="f">Velocidad de la voz
       <input id="sRate" type="number" min="0.5" max="1.3" step="0.05">
     </label>
-    <p class="muted">Con pulsador: el pulsador debe enviar la tecla <b>Espacio</b> o <b>Intro</b>. Para probar sin pulsador, usa la barra espaciadora.</p>
+    <p class="muted">Con pulsador: el pulsador debe enviar la tecla <b>Espacio</b> o <b>Intro</b>. Para probar sin pulsador, usa la barra espaciadora. Con ratón: se elige con clic; si activas la permanencia, basta con dejar el puntero quieto encima (útil con ratón de cabeza, por ejemplo Enable Viacam).</p>
   </section>
 
   <!-- SESIÓN -->
@@ -190,6 +204,93 @@
       <button class="b" id="clearLog">Borrar registro</button>
     </div>
   </section>
+
+  <!-- AYUDA -->
+  <section id="ayuda" class="view">
+    <h2>Guía rápida para el profesorado</h2>
+    <p>APP SUMMER sirve para que la alumna aprenda el vocabulario básico de cada asignatura con pictogramas y fotos, respondiendo con la forma que mejor le funcione: tocando la tablet, con un pulsador o con el ratón. La educadora acompaña cada sesión.</p>
+
+    <details open><summary>1. Primeros pasos (5 minutos)</summary>
+      <ol>
+        <li>En <b>1 · Vocabulario</b>, elige tu asignatura en el desplegable o pulsa <b>＋ Nueva asignatura</b> y escribe su nombre.</li>
+        <li>Escribe una palabra y pulsa <b>Buscar y añadir</b>. La app propone 3 pictogramas de ARASAAC: toca el más adecuado (queda marcado en verde).</li>
+        <li>En <b>2 · Ajustes</b>, elige cómo responderá la alumna.</li>
+        <li>En <b>3 · Sesión</b>, elige asignatura, bloque y actividad y pulsa <b>▶ Empezar sesión</b>.</li>
+      </ol>
+    </details>
+
+    <details><summary>2. Preparar el vocabulario</summary>
+      <ul>
+        <li><b>Pictograma</b>: toca el que mejor represente la palabra. Si no te convence ninguno, pulsa <b>Buscar otra vez</b> o usa una imagen propia.</li>
+        <li><b>📷 Foto propia</b>: desde la galería o la cámara de la tablet. <b>🔗 Imagen web</b>: pega la dirección de una imagen (mantén pulsada la imagen → «Copiar dirección de la imagen»). La app reduce las imágenes para que ocupen poco.</li>
+        <li><b>Bloques temáticos</b> (por ejemplo «Vegetales»): créalos en su recuadro y, en cada palabra, elige el bloque en <b>«＋ Añadir a un bloque…»</b>. Una palabra puede estar en varios bloques; la ✕ la saca del bloque.</li>
+        <li>Con <b>Ver</b> se muestran solo las palabras de un bloque; las palabras nuevas entran directamente en él.</li>
+        <li>Consejo: empieza con 5–8 palabras muy distintas entre sí y evita pictogramas parecidos en las primeras sesiones.</li>
+      </ul>
+    </details>
+
+    <details><summary>3. Guardar y compartir (GitHub y hoja de cálculo)</summary>
+      <ul>
+        <li>Todo se guarda automáticamente <b>en el dispositivo</b>. Para tenerlo en otros dispositivos, pulsa <b>☁️ Guardar en GitHub</b> (hace falta una clave de GitHub, en «Más opciones»).</li>
+        <li>En otro dispositivo: elige la asignatura en <b>Asignaturas guardadas en GitHub</b> y pulsa <b>Traer a este dispositivo</b> (no hace falta clave).</li>
+        <li><b>Sin cuenta de GitHub</b>: pulsa <b>⬇️ Descargar plantilla</b>, rellénala en Excel o Google Sheets (una palabra por fila; bloques separados por «;») y envíasela a quien gestione la app. Esa persona la carga con <b>📊 Importar hoja rellena</b>.</li>
+        <li>El repositorio es público: <b>no subas fotos de personas</b> ni datos del alumnado.</li>
+      </ul>
+    </details>
+
+    <details><summary>4. Formas de responder de la alumna</summary>
+      <table>
+        <tr><th>Forma</th><th>Cómo funciona</th><th>Para qué</th></tr>
+        <tr><td>Tocar la pantalla</td><td>Toca la opción. Se ignoran los toques repetidos y los que hace mientras habla la app.</td><td>Tablet</td></tr>
+        <tr><td>Pulsador con barrido</td><td>La app resalta y nombra cada opción; pulsa cuando llega la correcta. El pulsador debe enviar Espacio o Intro.</td><td>Portátil con pulsador</td></tr>
+        <tr><td>Ratón</td><td>Clic en la opción. Opcional: elegir dejando el puntero quieto encima (barra azul de progreso).</td><td>Ordenador, ratón de cabeza y <b>probar la app</b></td></tr>
+      </table>
+      <p>En <b>Ajustes</b> se regulan el número de opciones (2–4), la velocidad del barrido y de la voz, y el tiempo para ignorar toques repetidos. Empieza con <b>2 opciones</b> y barrido lento (3 s).</p>
+    </details>
+
+    <details><summary>5. Las actividades</summary>
+      <table>
+        <tr><th>Actividad</th><th>Qué hace la alumna</th><th>Cuándo usarla</th></tr>
+        <tr><td>0 · Causa-efecto</td><td>Toca o pulsa y aparece una imagen con su nombre.</td><td>Para empezar y comprobar el acceso.</td></tr>
+        <tr><td>1 · Presentación</td><td>Ve y oye cada palabra.</td><td>Palabras nuevas.</td></tr>
+        <tr><td>2 · ¿Dónde está…?</td><td>Oye y lee la pregunta y elige la imagen.</td><td>Primera identificación.</td></tr>
+        <tr><td>3 · Escucha y elige</td><td>Solo oye la pregunta.</td><td>Comprensión oral.</td></tr>
+        <tr><td>4 · Lee y elige</td><td>Lee la palabra y elige su imagen.</td><td>Lectura global.</td></tr>
+        <tr><td>5 · ¿Cómo se llama?</td><td>Ve la imagen y elige la palabra escrita.</td><td>Lectura global (más difícil).</td></tr>
+        <tr><td>6 · Repaso mezclado</td><td>Mezcla las anteriores con palabras ya trabajadas.</td><td>Repaso y mantenimiento.</td></tr>
+      </table>
+      <p><b>Ayudas automáticas</b> cuando falla: 1.º se repite la pregunta; 2.º la opción correcta parpadea; 3.º solo queda la correcta (siempre termina acertando).</p>
+    </details>
+
+    <details><summary>6. Durante la sesión (educadora)</summary>
+      <ul>
+        <li>La sesión se abre a pantalla completa. Abajo está la barra de la educadora: <b>🔊 Repetir</b>, <b>🤝 Respuesta con mi ayuda</b> (márcalo antes de que responda si la has guiado), <b>⏭ Saltar</b> y <b>■ Terminar</b>.</li>
+        <li>Sesiones cortas (10–15 minutos). Si se cansa, termina: lo hecho queda registrado.</li>
+        <li>Coloca la tablet o el pulsador donde llegue con comodidad y comprueba el acceso con la actividad 0.</li>
+      </ul>
+    </details>
+
+    <details><summary>7. Registro y seguimiento</summary>
+      <ul>
+        <li>En <b>4 · Registro</b> se ve, por asignatura, cada palabra con sus aciertos sola, con ayuda, errores y porcentaje de aciertos sola.</li>
+        <li><b>Descargar registro (CSV)</b> lo abre en Excel para la evaluación o la ACIS.</li>
+        <li>Orientación: cuando una palabra tiene un 80 % o más de aciertos sola en dos sesiones, pasa a una actividad más difícil o a más opciones.</li>
+        <li>El registro <b>se queda solo en el dispositivo</b>: nunca se sube a GitHub.</li>
+      </ul>
+    </details>
+
+    <details><summary>8. Problemas frecuentes</summary>
+      <ul>
+        <li><b>No aparecen pictogramas</b>: hace falta internet para buscarlos en ARASAAC.</li>
+        <li><b>No se oye la voz</b>: sube el volumen; en Android, comprueba en Ajustes → Accesibilidad → Salida de texto a voz que hay una voz en español.</li>
+        <li><b>El pulsador no responde</b>: debe enviar Espacio o Intro; prueba con la barra espaciadora del teclado.</li>
+        <li><b>No veo los últimos cambios</b>: recarga la página (la versión aparece arriba, junto al título).</li>
+        <li><b>«GitHub no acepta la clave»</b>: la clave ha caducado o no tiene permiso Contents: Read and write.</li>
+      </ul>
+    </details>
+
+    <p class="muted">Pictogramas: Sergio Palao · ARASAAC (CC BY-NC-SA). Código libre (GPL-3.0): <a href="https://github.com/biogeo-iesleliana/summer-app" target="_blank" rel="noopener">repositorio de APP SUMMER</a>.</p>
+  </section>
 </main>
 
 <div id="stage">
@@ -213,7 +314,7 @@
 const KEY = "appsummer.v0";
 const DEFAULT = {
   words: ["planta","raíz","hoja","flor","semilla","agua","sol"].map(t => ({texto:t, pictoId:null, cands:[]})),
-  settings: {mode:"touch", n:2, scan:3, laps:2, deb:0.8, rate:0.9},
+  settings: {mode:"touch", n:2, scan:3, laps:2, deb:0.8, rate:0.9, dwell:0},
   log: []
 };
 /* Todo se guarda en IndexedDB (mucho más espacio que localStorage, necesario para varias asignaturas con fotos) */
@@ -703,7 +804,9 @@ $("#fillAll").onclick = async () => { for (const w of S.words) if (!w.cands.leng
 /* ---------- ajustes ---------- */
 const bind = (sel, key, num=true) => { const el = $(sel); el.value = S.settings[key];
   el.onchange = () => { S.settings[key] = num ? Number(el.value) : el.value; save(); }; };
-bind("#sMode","mode",false); bind("#sN","n"); bind("#sScan","scan"); bind("#sLaps","laps"); bind("#sDeb","deb"); bind("#sRate","rate");
+bind("#sMode","mode",false); bind("#sDwell","dwell"); bind("#sN","n");
+const showDwell = () => { $("#dwellRow").hidden = S.settings.mode !== "mouse"; };
+$("#sMode").addEventListener("change", showDwell); showDwell(); bind("#sScan","scan"); bind("#sLaps","laps"); bind("#sDeb","deb"); bind("#sRate","rate");
 
 /* ---------- voz ---------- */
 let voice = null;
@@ -744,12 +847,13 @@ $("#start").onclick = () => {
   }
   sess = { act, pool: usable, queue: shuffle(queue), i: 0, id: Date.now(), lastCorrectPos: [] };
   $("#stage").classList.add("on");
+  $("#stage").classList.toggle("mouse", S.settings.mode === "mouse");
   try { document.documentElement.requestFullscreen?.().catch(() => {}); } catch(e){}
   nextItem();
 };
 function alertBox(msg){ const p = document.createElement("p"); p.textContent = msg; p.style.color = "#b00"; $("#sesion").appendChild(p); setTimeout(() => p.remove(), 4000); }
 
-function stopScan(){ clearTimeout(scanTimer); scanTimer = null; document.querySelectorAll(".opt").forEach(o => o.classList.remove("scan")); }
+function stopScan(){ clearDwell(); clearTimeout(scanTimer); scanTimer = null; document.querySelectorAll(".opt").forEach(o => o.classList.remove("scan")); }
 
 function endSession(){
   stopScan(); if ("speechSynthesis" in window) speechSynthesis.cancel(); sess = null;
@@ -772,6 +876,21 @@ function nextItem(){
   else showChoice(target, type);
 }
 
+/* toque, clic y, en modo ratón, selección por permanencia (útil con ratón de cabeza) */
+let dwellTimer = null;
+function clearDwell(){ clearTimeout(dwellTimer); dwellTimer = null; document.querySelectorAll(".opt.dwell").forEach(o => o.classList.remove("dwell")); }
+function wireOpt(o, k){
+  o.onpointerup = () => { clearDwell(); accept(k); };
+  if (S.settings.mode !== "mouse" || !(S.settings.dwell > 0)) return;
+  o.onpointerenter = () => {
+    clearDwell();
+    if (Date.now() < inputLockedUntil || o.classList.contains("hidden")) return;
+    o.style.setProperty("--dwell", S.settings.dwell + "s");
+    void o.offsetWidth; o.classList.add("dwell");
+    dwellTimer = setTimeout(() => { clearDwell(); accept(k); }, S.settings.dwell * 1000);
+  };
+  o.onpointerleave = clearDwell;
+}
 /* show: "both" (pictograma + palabra), "picto" (solo pictograma), "word" (solo palabra) */
 function makeOpt(w, show = "both"){
   const d = document.createElement("div"); d.className = "opt" + (show === "word" ? " wordonly" : "");
@@ -781,7 +900,7 @@ function makeOpt(w, show = "both"){
 function singleCell(content){
   const g = $("#grid"); g.className = "n1"; g.innerHTML = "";
   const o = document.createElement("div"); o.className = "opt"; o.innerHTML = content;
-  o.onpointerup = () => accept(0);
+  wireOpt(o, 0);
   g.appendChild(o); sess.options = [o]; sess.correctIdx = 0; return o;
 }
 
@@ -815,7 +934,7 @@ function showChoice(w, type){
   const items = others.slice(); items.splice(pos, 0, w);
   const show = type === "donde" ? "both" : type === "nombre" ? "word" : "picto";
   const g = $("#grid"); g.className = n === 3 ? "n3" : ""; g.innerHTML = "";
-  sess.options = items.map((it, k) => { const o = makeOpt(it, show); o.onpointerup = () => accept(k); g.appendChild(o); return o; });
+  sess.options = items.map((it, k) => { const o = makeOpt(it, show); wireOpt(o, k); g.appendChild(o); return o; });
   sess.correctIdx = pos;
   const P = $("#prompt");
   if (type === "donde") P.textContent = `¿Dónde está ${w.texto}?`;
